@@ -4,34 +4,49 @@ import { useEffect, useState } from 'react'
 import { createClient } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const supabase = createClient()
+
 export default function Home() {
   const [user, setUser] = useState(null)
+  const [households, setHouseholds] = useState([])
   const [loading, setLoading] = useState(true)
   const [aiSuggestion, setAiSuggestion] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) router.push('/auth/login')
+      if (!user) { router.push('/auth/login'); return }
       setUser(user)
+
+      const { data: members } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', user.id)
+
+      setHouseholds(members || [])
+      console.log('members från DB:', members)
       setLoading(false)
     }
     getUser()
-  }, [])
+  }, [router])
 
   async function getAiSuggestion() {
     setAiLoading(true)
     const response = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: 'Föreslå en veckans meny med 5 middagar för en familj. Håll det kort och enkelt, bara maträtternas namn.' }),
+      body: JSON.stringify({
+        prompt: 'Föreslå en veckans meny med 5 middagar. Bara namnen pa ratterna.',
+        householdId: households[0]?.household_id
+      }),
     })
     const data = await response.json()
     setAiSuggestion(data.content)
-    setAiLoading(false)
+    setAiLoading(true)
+    console.log('householdId som skickas:', households[0]?.household_id)
+    console.log('households:', households)
   }
 
   async function handleLogout() {
