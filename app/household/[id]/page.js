@@ -7,18 +7,26 @@ import Link from 'next/link'
 
 const supabase = createClient()
 
+function generateToken() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(18)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export default function HouseholdDetailPage() {
   const [household, setHousehold] = useState(null)
   const [preferences, setPreferences] = useState(null)
   const [members, setMembers] = useState([])
+  const [pendingInvites, setPendingInvites] = useState([])
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLink, setInviteLink] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
   const router = useRouter()
-  const params = useParams()
-  const id = params.id
+  const { id } = useParams()
 
   useEffect(() => {
     async function load() {
@@ -47,6 +55,15 @@ export default function HouseholdDetailPage() {
 
       const myMember = m?.find(mem => mem.user_id === user.id)
       setRole(myMember?.role)
+
+      const { data: invites } = await supabase
+        .from('household_invites')
+        .select('*')
+        .eq('household_id', id)
+        .eq('accepted', false)
+        .order('id', { ascending: false })
+      setPendingInvites(invites || [])
+
       setLoading(false)
     }
     load()
@@ -67,12 +84,36 @@ export default function HouseholdDetailPage() {
 
   async function sendInvite() {
     if (!inviteEmail) return
+    setSendingInvite(true)
+    const token = generateToken()
+    const expires = new Date()
+    expires.setDate(expires.getDate() + 7)
+
     await supabase.from('household_invites').insert({
       household_id: id,
       email: inviteEmail,
+      token,
+      accepted: false,
+      expires_at: expires.toISOString(),
     })
+
+    const link = `${window.location.origin}/invite/${token}`
+    setInviteLink(link)
     setInviteEmail('')
-    alert(`Inbjudan skickad till ${inviteEmail}`)
+
+    const { data: invites } = await supabase
+      .from('household_invites')
+      .select('*')
+      .eq('household_id', id)
+      .eq('accepted', false)
+      .order('id', { ascending: false })
+    setPendingInvites(invites || [])
+    setSendingInvite(false)
+  }
+
+  async function cancelInvite(inviteId) {
+    await supabase.from('household_invites').delete().eq('id', inviteId)
+    setPendingInvites(prev => prev.filter(i => i.id !== inviteId))
   }
 
   function updateArrayPref(key, value) {
@@ -100,20 +141,12 @@ export default function HouseholdDetailPage() {
       </div>
 
       {/* Flikar */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #e5e5e5', paddingBottom: '0' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #e5e5e5' }}>
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '10px 16px',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === tab ? '2px solid #000' : '2px solid transparent',
-              cursor: 'pointer',
-              fontWeight: activeTab === tab ? '600' : '400',
-              fontSize: '14px',
-            }}
+            style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: activeTab === tab ? '2px solid #000' : '2px solid transparent', cursor: 'pointer', fontWeight: activeTab === tab ? '600' : '400', fontSize: '14px' }}
           >
             {tabLabels[tab]}
           </button>
@@ -140,25 +173,12 @@ export default function HouseholdDetailPage() {
           {preferences && (
             <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px' }}>
               <h3 style={{ marginBottom: '12px' }}>Hushållets preferenser</h3>
-              {preferences.allergies?.length > 0 && (
-                <p style={{ fontSize: '14px', marginBottom: '8px' }}>
-                  <strong>Allergier:</strong> {preferences.allergies.join(', ')}
-                </p>
-              )}
-              {preferences.diet_preferences?.length > 0 && (
-                <p style={{ fontSize: '14px', marginBottom: '8px' }}>
-                  <strong>Kostpreferenser:</strong> {preferences.diet_preferences.join(', ')}
-                </p>
-              )}
-              {preferences.favorite_foods?.length > 0 && (
-                <p style={{ fontSize: '14px', marginBottom: '8px' }}>
-                  <strong>Favoriträtter:</strong> {preferences.favorite_foods.join(', ')}
-                </p>
-              )}
-              {preferences.disliked_foods?.length > 0 && (
-                <p style={{ fontSize: '14px' }}>
-                  <strong>Undviker:</strong> {preferences.disliked_foods.join(', ')}
-                </p>
+              {preferences.allergies?.length > 0 && <p style={{ fontSize: '14px', marginBottom: '8px' }}><strong>Allergier:</strong> {preferences.allergies.join(', ')}</p>}
+              {preferences.diet_preferences?.length > 0 && <p style={{ fontSize: '14px', marginBottom: '8px' }}><strong>Kostpreferenser:</strong> {preferences.diet_preferences.join(', ')}</p>}
+              {preferences.favorite_foods?.length > 0 && <p style={{ fontSize: '14px', marginBottom: '8px' }}><strong>Favoriträtter:</strong> {preferences.favorite_foods.join(', ')}</p>}
+              {preferences.disliked_foods?.length > 0 && <p style={{ fontSize: '14px' }}><strong>Undviker:</strong> {preferences.disliked_foods.join(', ')}</p>}
+              {!preferences.allergies?.length && !preferences.diet_preferences?.length && !preferences.favorite_foods?.length && !preferences.disliked_foods?.length && (
+                <p style={{ color: '#999', fontSize: '14px' }}>Inga preferenser inställda. <button onClick={() => setActiveTab('preferences')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#000', textDecoration: 'underline', fontSize: '14px', padding: 0 }}>Lägg till</button></p>
               )}
             </div>
           )}
@@ -170,36 +190,15 @@ export default function HouseholdDetailPage() {
         <div>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Antal vuxna</label>
-            <input
-              type="number"
-              value={household.adults}
-              min={1}
-              onChange={(e) => setHousehold(prev => ({ ...prev, adults: parseInt(e.target.value) }))}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-            />
+            <input type="number" value={household.adults} min={1} onChange={(e) => setHousehold(prev => ({ ...prev, adults: parseInt(e.target.value) }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Antal barn</label>
-            <input
-              type="number"
-              value={household.children}
-              min={0}
-              onChange={(e) => setHousehold(prev => ({ ...prev, children: parseInt(e.target.value) }))}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-            />
+            <input type="number" value={household.children} min={0} onChange={(e) => setHousehold(prev => ({ ...prev, children: parseInt(e.target.value) }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Veckbudget (kr)</label>
-            <input
-              type="number"
-              value={household.weekly_budget}
-              min={0}
-              step={100}
-              onChange={(e) => setHousehold(prev => ({ ...prev, weekly_budget: parseInt(e.target.value) }))}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
-            />
+            <input type="number" value={household.weekly_budget} min={0} step={100} onChange={(e) => setHousehold(prev => ({ ...prev, weekly_budget: parseInt(e.target.value) }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }} />
           </div>
 
           {[
@@ -221,11 +220,7 @@ export default function HouseholdDetailPage() {
             </div>
           ))}
 
-          <button
-            onClick={savePreferences}
-            disabled={saving}
-            style={{ width: '100%', padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px' }}
-          >
+          <button onClick={savePreferences} disabled={saving} style={{ width: '100%', padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px' }}>
             {saving ? 'Sparar...' : 'Spara preferenser'}
           </button>
         </div>
@@ -234,10 +229,11 @@ export default function HouseholdDetailPage() {
       {/* Medlemmar */}
       {activeTab === 'members' && (
         <div>
+          {/* Medlemslista */}
           <div style={{ marginBottom: '24px' }}>
             {members.map(member => (
-              <div key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f9f9f9', borderRadius: '10px', marginBottom: '8px' }}>
-                <p style={{ fontSize: '14px', color: '#666' }}>{member.user_id}</p>
+              <div key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f9f9f9', borderRadius: '10px', marginBottom: '8px' }}>
+                <p style={{ fontSize: '14px', color: '#444' }}>{member.user_id}</p>
                 <span style={{ background: member.role === 'admin' ? '#000' : '#e5e5e5', color: member.role === 'admin' ? '#fff' : '#333', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
                   {member.role === 'admin' ? 'Admin' : 'Medlem'}
                 </span>
@@ -245,22 +241,57 @@ export default function HouseholdDetailPage() {
             ))}
           </div>
 
+          {/* Bjud in */}
           {role === 'admin' && (
-            <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px' }}>
+            <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
               <h3 style={{ marginBottom: '16px' }}>Bjud in medlem</h3>
               <input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') sendInvite() }}
                 placeholder="mejladress@exempel.se"
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', marginBottom: '12px' }}
               />
-              <button
-                onClick={sendInvite}
-                style={{ width: '100%', padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-              >
-                Skicka inbjudan
+              <button onClick={sendInvite} disabled={sendingInvite || !inviteEmail} style={{ width: '100%', padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                {sendingInvite ? 'Skapar inbjudan...' : 'Skapa inbjudningslänk'}
               </button>
+
+              {/* Kopierbara länken */}
+              {inviteLink && (
+                <div style={{ marginTop: '16px', background: '#fff', border: '1px solid #e5e5e5', borderRadius: '8px', padding: '12px' }}>
+                  <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>Kopiera och skicka denna länk:</p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      readOnly
+                      value={inviteLink}
+                      style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '12px', color: '#444', background: '#f9f9f9' }}
+                    />
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(inviteLink); alert('Länk kopierad!') }}
+                      style={{ padding: '8px 14px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}
+                    >
+                      Kopiera
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Väntande inbjudningar */}
+          {role === 'admin' && pendingInvites.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#666', marginBottom: '10px' }}>Väntande inbjudningar</h3>
+              {pendingInvites.map(inv => (
+                <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '8px' }}>
+                  <div>
+                    <p style={{ fontSize: '14px' }}>{inv.email}</p>
+                    {inv.expires_at && <p style={{ fontSize: '12px', color: '#999' }}>Går ut {new Date(inv.expires_at).toLocaleDateString('sv-SE')}</p>}
+                  </div>
+                  <button onClick={() => cancelInvite(inv.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', fontSize: '18px', lineHeight: 1 }}>×</button>
+                </div>
+              ))}
             </div>
           )}
         </div>
