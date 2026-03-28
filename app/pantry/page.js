@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -65,7 +66,7 @@ export default function PantryPage() {
     setItems(prev => prev.filter(i => i.id !== id))
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   const expiringSoon = items.filter(i => { const d = daysUntilExpiry(i.expires_at); return d !== null && d <= 3 })
 
@@ -119,7 +120,7 @@ export default function PantryPage() {
             </div>
           </div>
           <button onClick={addItem} disabled={saving || !form.name.trim()} style={{ width: '100%', padding: '11px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-            {saving ? 'Sparar...' : 'Lägg till'}
+            {saving ? <><Spinner />&nbsp;Sparar...</> : 'Lägg till'}
           </button>
         </div>
       )}

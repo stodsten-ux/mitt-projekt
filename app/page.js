@@ -5,6 +5,7 @@ import { createClient } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import HouseholdCard from '../components/HouseholdCard'
+import Spinner from '../components/Spinner'
 
 const supabase = createClient()
 
@@ -64,8 +65,8 @@ export default function Home() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-      <p style={{ color: 'var(--text-muted)' }}>Laddar...</p>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', gap: '12px', color: 'var(--text-muted)' }}>
+      <Spinner size="lg" />
     </div>
   )
 
@@ -113,7 +114,7 @@ export default function Home() {
           disabled={aiLoading}
           style={{ padding: '11px 20px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', marginBottom: aiSuggestion ? '16px' : 0, fontSize: '14px', fontWeight: '500' }}
         >
-          {aiLoading ? 'Hämtar förslag...' : 'Ge mig förslag!'}
+          {aiLoading ? <><Spinner />&nbsp;Hämtar förslag...</> : 'Ge mig förslag!'}
         </button>
         {aiSuggestion && (
           <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text)', lineHeight: '1.7', fontSize: '14px' }}>

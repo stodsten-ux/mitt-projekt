@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -38,6 +39,8 @@ export default function MenuPage() {
   const [saving, setSaving] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [shoppingLoading, setShoppingLoading] = useState(false)
+  const [expandLoading, setExpandLoading] = useState(false)
+  const [expandStatus, setExpandStatus] = useState('')
   const [editingDay, setEditingDay] = useState(null)
   const [editValue, setEditValue] = useState('')
   const router = useRouter()
@@ -96,6 +99,7 @@ export default function MenuPage() {
 
   async function getAiSuggestion() {
     setAiLoading(true)
+    setExpandStatus('')
     const response = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -116,10 +120,33 @@ export default function MenuPage() {
       }
       setMenuItems(newItems)
       await saveMenu(newItems)
+      // Expandera direkt efter sparning för att skapa recept med recipe_id
+      setAiLoading(false)
+      await expandMenu()
     } catch {
       alert('Kunde inte tolka AI-svaret. Försök igen.')
+      setAiLoading(false)
     }
-    setAiLoading(false)
+  }
+
+  async function expandMenu() {
+    if (!menuId) return
+    setExpandLoading(true)
+    setExpandStatus('Genererar recept med ingredienser...')
+    const response = await fetch('/api/menu/expand', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ menuId, householdId }),
+    })
+    const data = await response.json()
+    if (data.success) {
+      setExpandStatus(data.created > 0
+        ? `✅ ${data.created} recept skapade — inköpslistan kan nu genereras!`
+        : '✅ Alla rätter har redan recept.')
+    } else {
+      setExpandStatus('Kunde inte generera recept. Försök igen.')
+    }
+    setExpandLoading(false)
   }
 
   async function generateShoppingList() {
@@ -154,7 +181,7 @@ export default function MenuPage() {
 
   const hasItems = Object.keys(menuItems).length > 0
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
@@ -202,21 +229,37 @@ export default function MenuPage() {
 
       {saving && <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>Sparar...</p>}
 
+      {/* Expandera-status */}
+      {expandStatus && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', fontSize: '14px', color: 'var(--text)' }}>
+          {expandStatus}
+        </div>
+      )}
+
       {/* Knappar */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <button
           onClick={getAiSuggestion}
-          disabled={aiLoading}
+          disabled={aiLoading || expandLoading}
           style={{ padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}
         >
-          {aiLoading ? 'Hämtar AI-förslag...' : '✨ AI-förslag på hela veckan'}
+          {(aiLoading || expandLoading) ? <><Spinner />&nbsp;{expandLoading ? 'Genererar recept...' : 'Hämtar AI-förslag...'}</> : '✨ AI-förslag på hela veckan'}
         </button>
+        {hasItems && (
+          <button
+            onClick={expandMenu}
+            disabled={expandLoading || !menuId}
+            style={{ padding: '14px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '500' }}
+          >
+            {expandLoading ? <><Spinner />&nbsp;{expandStatus || 'Genererar ingredienser...'}</> : '⚡ Generera ingredienser för hela veckan'}
+          </button>
+        )}
         <button
           onClick={generateShoppingList}
           disabled={shoppingLoading || !hasItems}
           style={{ padding: '14px', background: 'var(--bg-card)', color: hasItems ? 'var(--text)' : 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '10px', cursor: hasItems ? 'pointer' : 'default', fontSize: '15px', fontWeight: '500' }}
         >
-          {shoppingLoading ? 'Genererar inköpslista...' : '🛍️ Generera inköpslista från menyn'}
+          {shoppingLoading ? <><Spinner />&nbsp;Genererar inköpslista...</> : '🛍️ Generera inköpslista från menyn'}
         </button>
       </div>
     </div>

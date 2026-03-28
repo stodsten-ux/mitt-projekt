@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -105,7 +106,7 @@ export default function RecipesPage() {
     else alert('Kunde inte spara receptet.')
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
@@ -140,7 +141,7 @@ export default function RecipesPage() {
               style={inputStyle}
             />
             <button onClick={handleSearch} disabled={searchLoading || !searchQuery.trim()} style={{ padding: '10px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', color: 'var(--text)', whiteSpace: 'nowrap' }}>
-              {searchLoading ? '...' : '🔍'}
+              {searchLoading ? <Spinner /> : '🔍'}
             </button>
           </div>
           {/* Sökresultat */}
@@ -246,7 +247,7 @@ export default function RecipesPage() {
             <textarea value={form.instructions} onChange={e => setForm(p => ({ ...p, instructions: e.target.value }))} placeholder="Koka pastan... Stek baconet..." rows={6} style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
           <button onClick={handleManualSave} disabled={saving || !form.title.trim()} style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}>
-            {saving ? 'Sparar...' : 'Spara recept'}
+            {saving ? <><Spinner />&nbsp;Sparar...</> : 'Spara recept'}
           </button>
         </div>
       )}
@@ -264,7 +265,7 @@ export default function RecipesPage() {
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>AI tar hänsyn till hushållets preferenser och allergier.</p>
           </div>
           <button onClick={handleAiGenerate} disabled={aiLoading || !aiPrompt.trim()} style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}>
-            {aiLoading ? 'Genererar recept...' : 'Generera recept'}
+            {aiLoading ? <><Spinner />&nbsp;Genererar recept...</> : 'Generera recept'}
           </button>
         </div>
       )}

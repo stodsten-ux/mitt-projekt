@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../../components/Spinner'
 
 const supabase = createClient()
 
@@ -80,7 +81,7 @@ export default function RecipeDetailPage() {
     router.push('/recipes')
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
   if (!recipe) return null
 
   const baseServings = recipe.servings || 4
@@ -170,10 +171,10 @@ export default function RecipeDetailPage() {
       {/* Åtgärder */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
         <button onClick={publishRecipe} disabled={publishing} style={{ padding: '13px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-          {publishing ? 'Publicerar...' : '🌍 Publicera till delade recept'}
+          {publishing ? <><Spinner />&nbsp;Publicerar...</> : '🌍 Publicera till delade recept'}
         </button>
         <button onClick={deleteRecipe} disabled={deleting} style={{ padding: '13px', background: 'rgba(255,59,48,0.06)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px' }}>
-          {deleting ? 'Tar bort...' : 'Ta bort recept'}
+          {deleting ? <><Spinner />&nbsp;Tar bort...</> : 'Ta bort recept'}
         </button>
       </div>
     </div>

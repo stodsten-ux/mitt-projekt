@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../../components/Spinner'
 
 const supabase = createClient()
 
@@ -88,6 +89,7 @@ export default function HouseholdDetailPage() {
       children: household.children,
       weekly_budget: household.weekly_budget,
       household_type: household.household_type,
+      location_city: household.location_city || null,
     }).eq('id', id)
     setSaving(false)
     alert('Sparat!')
@@ -133,7 +135,7 @@ export default function HouseholdDetailPage() {
     setPreferences(prev => ({ ...prev, store_split: { ...(prev.store_split || {}), [store]: pct } }))
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
   if (!household) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Hushållet hittades inte.</div>
 
   const tabs = ['overview', 'preferences', 'members']
@@ -226,6 +228,11 @@ export default function HouseholdDetailPage() {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Veckbudget (kr)</label>
             <input type="number" value={household.weekly_budget} min={0} step={100} onChange={e => setHousehold(prev => ({ ...prev, weekly_budget: parseInt(e.target.value) }))} style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Stad / område</label>
+            <input type="text" value={household.location_city || ''} onChange={e => setHousehold(prev => ({ ...prev, location_city: e.target.value }))} placeholder="T.ex. Stockholm, Göteborg..." style={inputStyle} />
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Används för att hitta närmaste butiker</p>
           </div>
 
           {/* Kostpreferenser */}
@@ -328,7 +335,7 @@ export default function HouseholdDetailPage() {
           )}
 
           <button onClick={savePreferences} disabled={saving} style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}>
-            {saving ? 'Sparar...' : 'Spara preferenser'}
+            {saving ? <><Spinner />&nbsp;Sparar...</> : 'Spara preferenser'}
           </button>
         </div>
       )}

@@ -49,6 +49,7 @@ export async function POST(request) {
           `Du hjälper hushållet "${household.display_name || household.name}" med matplanering.`,
           `Hushållet består av ${household.adults} vuxna och ${household.children} barn.`,
           `Veckbudget för mat: ${household.weekly_budget} kr.`,
+          household.location_city ? `Hushållet bor i ${household.location_city}.` : '',
           typeContext,
           prefs?.allergies?.length ? `Allergier och intoleranser: ${prefs.allergies.join(', ')}.` : '',
           prefs?.diet_preferences?.length ? `Kostpreferenser: ${prefs.diet_preferences.join(', ')}.` : '',

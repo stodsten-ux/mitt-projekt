@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -69,7 +70,7 @@ export default function PanicPage() {
     setSearching(false)
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   const selectedCount = Object.values(selected).filter(Boolean).length
 
@@ -119,7 +120,7 @@ export default function PanicPage() {
             disabled={searching || selectedCount === 0}
             style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: selectedCount === 0 ? 'default' : 'pointer', fontSize: '15px', fontWeight: '600', marginBottom: '24px', opacity: selectedCount === 0 ? 0.5 : 1 }}
           >
-            {searching ? 'Söker recept...' : `🔍 Hitta recept med ${selectedCount} vara${selectedCount !== 1 ? 'r' : ''}`}
+            {searching ? <><Spinner />&nbsp;Söker recept...</> : `🔍 Hitta recept med ${selectedCount} vara${selectedCount !== 1 ? 'r' : ''}`}
           </button>
 
           {/* Resultat */}

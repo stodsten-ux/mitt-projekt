@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -110,7 +111,7 @@ export default function ShoppingPage() {
     const response = await fetch('/api/prices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: uncheckedItems, stores: preferredStores }),
+      body: JSON.stringify({ items: uncheckedItems, stores: preferredStores, includeCampaigns: true }),
     })
     const data = await response.json()
     if (data.items) setPriceResults(data)
@@ -124,7 +125,7 @@ export default function ShoppingPage() {
     if (data) { setLists(prev => [data, ...prev]); setActiveList(data); setItems([]) }
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   const grouped = items.reduce((acc, item) => {
     const cat = item.store || 'Övrigt'
@@ -191,10 +192,10 @@ export default function ShoppingPage() {
               {showAdd ? 'Avbryt' : '+ Lägg till vara'}
             </button>
             <button onClick={optimizeWithAi} disabled={aiLoading || items.length === 0} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: items.length === 0 ? 'var(--text-muted)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: items.length === 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
-              {aiLoading ? 'Optimerar...' : '✨ AI-tips'}
+              {aiLoading ? <><Spinner />&nbsp;Optimerar...</> : '✨ AI-tips'}
             </button>
             <button onClick={findBestPrices} disabled={priceLoading || items.filter(i => !i.checked).length === 0} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: items.length === 0 ? 'var(--text-muted)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: items.length === 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
-              {priceLoading ? 'Söker priser...' : '💰 Hitta bästa pris'}
+              {priceLoading ? <><Spinner />&nbsp;Söker priser...</> : '💰 Hitta bästa pris'}
             </button>
           </div>
 
@@ -205,16 +206,24 @@ export default function ShoppingPage() {
                 <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>💰 Prisjämförelse</h3>
                 <button onClick={() => setPriceResults(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', lineHeight: 1 }}>×</button>
               </div>
+              {priceResults.weeklyTip && (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '13px', color: 'var(--text)' }}>
+                  💡 {priceResults.weeklyTip}
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                 {priceResults.items?.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '10px 0', borderBottom: i < priceResults.items.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500' }}>{item.name}</span>
-                      {item.tip && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{item.tip}</p>}
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-                      <span style={{ fontSize: '14px', color: 'var(--success)', fontWeight: '600' }}>{item.bestPrice}</span>
-                      {item.store && <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.store}</p>}
+                  <div key={i} style={{ padding: '10px 0', borderBottom: i < priceResults.items.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500' }}>{item.name}</span>
+                        {item.tip && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{item.tip}</p>}
+                        {item.campaign && <p style={{ fontSize: '12px', color: 'var(--warning)', marginTop: '2px' }}>🏷️ {item.campaign}</p>}
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--success)', fontWeight: '600' }}>{item.bestPrice}</span>
+                        {item.store && <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.store}</p>}
+                      </div>
                     </div>
                   </div>
                 ))}

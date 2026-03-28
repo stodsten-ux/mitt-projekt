@@ -699,3 +699,186 @@ Uppdatera /api/ai så att menyförslag alltid skapar recept:
 - Loopa och skapa recept för varje rätt
 - Spara recipe_id i menu_items
 - Returnera menyn med recipe_ids
+
+---
+
+### KAMPANJER & PRISINFORMATION
+
+**Syfte:** Hjälp hushållet handla smartare genom att utnyttja kampanjer
+
+**Funktioner:**
+- Visa nästa veckas erbjudanden och kampanjer per butik
+- Sök efter specifika varor med kampanjpris inom datumintervall
+  ex. "2 kaffe för lågt pris mellan [datum] och [datum]"
+- Rekommendera optimalt inköpsdatum baserat på kampanjer
+- Föreslå att köpa in varor i förväg när priset är lågt
+
+**Implementation:**
+- Claude web search söker kampanjer per butik och vecka
+- Prompt: "Sök efter kampanjer och extrapriser på [varor] hos [butiker] 
+  vecka [X]. Returnera som JSON med vara, pris, butik och datum."
+- Markera tydligt att priser är AI-uppskattningar
+- Spara kampanjhistorik för att lära sig mönster
+
+**Inköpsrekommendation:**
+- Analysera inköpslistans varor mot kända kampanjmönster
+- Föreslå: "Köp kaffe nu — brukar vara på rea hos ICA nästa vecka"
+- Visa estimerad besparing per vecka
+
+---
+
+### POSITIONERING & BUTIKSNÄRHET
+
+**Syfte:** Hjälp hushållet handla i rätt butik baserat på var de är
+
+**Funktioner:**
+- Spara hushållets bostadsort eller position
+- Visa närmaste butiker per kedja
+- Optimera inköpsrutt om flera butiker används (30/70-fördelning)
+- Föreslå: "Handla torrvaror på Willys, färskvaror på ICA"
+
+**Datamodell:**
+```sql
+ALTER TABLE households ADD COLUMN IF NOT EXISTS 
+  location_city TEXT;
+ALTER TABLE households ADD COLUMN IF NOT EXISTS 
+  location_coords JSONB; -- {lat, lng}
+```
+
+**Implementation:**
+- Använd webbläsarens Geolocation API (kräver tillstånd)
+- Alternativ: manuell inmatning av stad/område
+- Claude söker närmaste butiker baserat på position
+
+---
+
+### PERSONALISERAD MENY PER MEDLEM
+
+**Syfte:** Olika familjemedlemmar har olika behov
+
+**Exempel:**
+- En medlem bantar → lägre kalorier, mer protein, mindre kolhydrater
+- En medlem tränar mycket → mer protein, större portioner
+- Barn med specialkost → anpassade ingredienser
+
+**Datamodell:**
+```sql
+CREATE TABLE member_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  household_id UUID REFERENCES households(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  age INTEGER,
+  activity_level TEXT, -- sedentary, moderate, active, very_active
+  goal TEXT, -- maintain, lose_weight, gain_muscle, health
+  additional_restrictions TEXT[],
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**AI-kontext per medlem:**
+Skicka alla medlemmars profiler till Claude vid menyplanering:
+"Familjen har 5 medlemmar: Vuxen 1 bantar (mål: -0.5kg/vecka), 
+Vuxen 2 tränar styrka (behöver extra protein), 
+Barn 1 (8 år, äter inte stark mat)..."
+
+---
+
+### DIETIST-FUNKTION & KOSTRÅD
+
+**Syfte:** Näringsinformation och evidensbaserade kostråd
+
+**Funktioner:**
+- Beräkna näringsvärde per måltid och per vecka
+- Jämför mot rekommenderat dagligt intag (RDI)
+- Flagga om menyn saknar viktiga näringsämnen
+- Ge kostråd baserade på aktuell forskning
+- I förlängningen: integrering med Livsmedelsverkets databas
+
+**Prompt till Claude:**
+"Analysera denna veckomeny ur ett näringsperspektiv.
+Hushållet: [profiler].
+Meny: [rätter].
+Ge en kort analys av:
+1. Proteinbalans
+2. Kolhydrater och fiber  
+3. Fett och omega-3
+4. Vitaminer och mineraler att tänka på
+5. Konkreta förbättringsförslag"
+
+---
+
+### LÄRANDE HUSHÅLLSPROFIL
+
+**Syfte:** Appen lär känna hushållet över tid och blir smartare
+
+**Vad appen lär sig:**
+- Förbrukning av basvaror (mjölk, mjöl, salt, smör, ost, pasta)
+- Betyg på recept → undviker lågbetygsatta automatiskt
+- Säsongsmönster → mer soppa på vintern, sallad på sommaren
+- Inköpsfrekvens → påminn när basvaror troligen är slut
+
+**Datamodell:**
+```sql
+CREATE TABLE consumption_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  household_id UUID REFERENCES households(id) ON DELETE CASCADE,
+  item_name TEXT NOT NULL,
+  amount DECIMAL,
+  unit TEXT,
+  logged_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE household_insights (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  household_id UUID REFERENCES households(id) ON DELETE CASCADE,
+  insight_type TEXT, -- consumption, preference, seasonal
+  data JSONB,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**AI-användning:**
+Skicka konsumtionshistorik som kontext:
+"Hushållet använder i snitt 3L mjölk/vecka, 500g pasta/vecka.
+Senast köpte de pasta för 2 veckor sedan → påminn om påfyllning."
+
+---
+
+### RECEPTDATABAS — BYGGSTRATEGI
+
+**Princip:** Databas alltid först, AI som fallback
+```
+Användaren söker recept
+    ↓
+1. Sök i household recipes (privata)
+2. Sök i shared_recipes (publikt bibliotek)
+3. Om inget matchar → Claude API genererar
+4. Spara alltid AI-recept i recipes (ai_generated: true)
+5. Erbjud att publicera till shared_recipes
+```
+
+**Receptkvalitet:**
+- Betygsätt recept efter varje måltid (1-5 stjärnor)
+- Recept under 3 stjärnor föreslås max 1 gång/månad
+- Recept över 4 stjärnor föreslås oftare
+- Visa betygstrend: "Familjen gillar detta recept ⭐ 4.8"
+
+**Receptkällor att utforska:**
+- Arla.se, ICA.se, Coop.se har öppna receptsidor
+- Länka alltid till originalkällan (source_url)
+- Validera länk vid sparande
+- Markera trasiga länkar med ⚠️
+
+---
+
+### PRIORITETSORDNING FÖR ROADMAP
+
+1. ✅ Kärnflödet (recept → skafferi → inköpslista)
+2. ✅ Design & UX
+3. 🔲 Kampanjer & prisinformation
+4. 🔲 Positionering & butiksnärhet
+5. 🔲 Personaliserad meny per medlem
+6. 🔲 Lärande hushållsprofil
+7. 🔲 Dietist-funktion & kostråd
+8. 🔲 Receptdatabas från externa källor

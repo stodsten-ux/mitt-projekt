@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Spinner from '../../components/Spinner'
 
 const supabase = createClient()
 
@@ -51,7 +52,7 @@ export default function HouseholdPage() {
     router.push(`/household/${household.id}`)
   }
 
-  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '32px 20px' }}>
@@ -125,7 +126,7 @@ export default function HouseholdPage() {
               Avbryt
             </button>
             <button onClick={createHousehold} disabled={saving || !householdName} style={{ flex: 2, padding: '12px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
-              {saving ? 'Skapar...' : 'Skapa hushåll'}
+              {saving ? <><Spinner />&nbsp;Skapar...</> : 'Skapa hushåll'}
             </button>
           </div>
         </div>
