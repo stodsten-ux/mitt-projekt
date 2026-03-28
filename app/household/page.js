@@ -7,11 +7,13 @@ import Link from 'next/link'
 
 const supabase = createClient()
 
+const inputStyle = { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '15px', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
+
 export default function HouseholdPage() {
   const [user, setUser] = useState(null)
   const [households, setHouseholds] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('list') // list | create | join
+  const [view, setView] = useState('list')
   const [householdName, setHouseholdName] = useState('')
   const [adults, setAdults] = useState(2)
   const [children, setChildren] = useState(0)
@@ -25,12 +27,10 @@ export default function HouseholdPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
       setUser(user)
-
       const { data: members } = await supabase
         .from('household_members')
         .select('household_id, role, households(id, name, display_name, adults, children, weekly_budget)')
         .eq('user_id', user.id)
-
       if (members) setHouseholds(members)
       setLoading(false)
     }
@@ -40,47 +40,22 @@ export default function HouseholdPage() {
   async function createHousehold() {
     setSaving(true)
     setError(null)
-
     const { data: household, error: hError } = await supabase
       .from('households')
-      .insert({
-        name: householdName,
-        display_name: householdName,
-        adults,
-        children,
-        weekly_budget: budget,
-        created_by: user.id,
-      })
+      .insert({ name: householdName, display_name: householdName, adults, children, weekly_budget: budget, created_by: user.id })
       .select()
       .single()
-
     if (hError) { setError(hError.message); setSaving(false); return }
-
-    await supabase.from('household_members').insert({
-      household_id: household.id,
-      user_id: user.id,
-      role: 'admin',
-    })
-
-    await supabase.from('household_preferences').insert({
-      household_id: household.id,
-      allergies: [],
-      diet_preferences: [],
-      favorite_foods: [],
-      disliked_foods: [],
-    })
-
+    await supabase.from('household_members').insert({ household_id: household.id, user_id: user.id, role: 'admin' })
+    await supabase.from('household_preferences').insert({ household_id: household.id, allergies: [], diet_preferences: [], favorite_foods: [], disliked_foods: [] })
     router.push(`/household/${household.id}`)
   }
 
-  if (loading) return <div style={{ padding: '40px' }}>Laddar...</div>
+  if (loading) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Laddar...</div>
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>🏠 Mina hushåll</h1>
-        <Link href="/" style={{ color: '#666', textDecoration: 'none' }}>← Tillbaka</Link>
-      </div>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '32px 20px' }}>
+      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--text)' }}>🏠 Mina hushåll</h1>
 
       {/* Lista befintliga hushåll */}
       {households.length > 0 && (
@@ -89,16 +64,16 @@ export default function HouseholdPage() {
             <Link
               key={m.household_id}
               href={`/household/${m.household_id}`}
-              style={{ display: 'block', background: '#f9f9f9', borderRadius: '12px', padding: '20px', marginBottom: '12px', textDecoration: 'none', color: '#000' }}
+              style={{ display: 'block', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '10px', textDecoration: 'none', color: 'var(--text)' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h2 style={{ marginBottom: '4px' }}>{m.households?.display_name || m.households?.name}</h2>
-                  <p style={{ color: '#666', fontSize: '14px' }}>
+                  <h2 style={{ marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>{m.households?.display_name || m.households?.name}</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                     {m.households?.adults} vuxna · {m.households?.children} barn · {m.households?.weekly_budget} kr/vecka
                   </p>
                 </div>
-                <span style={{ background: m.role === 'admin' ? '#000' : '#e5e5e5', color: m.role === 'admin' ? '#fff' : '#333', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', alignSelf: 'center' }}>
+                <span style={{ background: m.role === 'admin' ? 'var(--accent)' : 'var(--bg-card)', color: m.role === 'admin' ? 'var(--accent-text)' : 'var(--text-muted)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
                   {m.role === 'admin' ? 'Admin' : 'Medlem'}
                 </span>
               </div>
@@ -107,83 +82,49 @@ export default function HouseholdPage() {
         </div>
       )}
 
-      {/* Knappar */}
+      {/* Knapp: skapa */}
       {view === 'list' && (
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setView('create')}
-            style={{ flex: 1, padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px' }}
-          >
-            + Skapa hushåll
-          </button>
-        </div>
+        <button
+          onClick={() => setView('create')}
+          style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}
+        >
+          + Skapa hushåll
+        </button>
       )}
 
-      {/* Skapa hushåll */}
+      {/* Formulär: skapa hushåll */}
       {view === 'create' && (
-        <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '24px' }}>
-          <h2 style={{ marginBottom: '20px' }}>Skapa nytt hushåll</h2>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px' }}>
+          <h2 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--text)' }}>Skapa nytt hushåll</h2>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Hushållets namn</label>
-            <input
-              type="text"
-              value={householdName}
-              onChange={(e) => setHouseholdName(e.target.value)}
-              placeholder="t.ex. Familjen Hallgren"
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' }}
-            />
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Hushållets namn</label>
+            <input type="text" value={householdName} onChange={(e) => setHouseholdName(e.target.value)} placeholder="t.ex. Familjen Hallgren" style={inputStyle} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Antal vuxna</label>
-              <input
-                type="number"
-                value={adults}
-                min={1}
-                onChange={(e) => setAdults(parseInt(e.target.value))}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' }}
-              />
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Antal vuxna</label>
+              <input type="number" value={adults} min={1} onChange={(e) => setAdults(parseInt(e.target.value))} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Antal barn</label>
-              <input
-                type="number"
-                value={children}
-                min={0}
-                onChange={(e) => setChildren(parseInt(e.target.value))}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' }}
-              />
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Antal barn</label>
+              <input type="number" value={children} min={0} onChange={(e) => setChildren(parseInt(e.target.value))} style={inputStyle} />
             </div>
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Veckbudget (kr)</label>
-            <input
-              type="number"
-              value={budget}
-              min={0}
-              step={100}
-              onChange={(e) => setBudget(parseInt(e.target.value))}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' }}
-            />
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Veckbudget (kr)</label>
+            <input type="number" value={budget} min={0} step={100} onChange={(e) => setBudget(parseInt(e.target.value))} style={inputStyle} />
           </div>
 
-          {error && <p style={{ color: 'red', marginBottom: '16px' }}>{error}</p>}
+          {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,59,48,0.08)', borderRadius: '8px' }}>{error}</p>}
 
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => setView('list')}
-              style={{ flex: 1, padding: '12px', background: '#f1f1f1', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
+            <button onClick={() => setView('list')} style={{ flex: 1, padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '14px' }}>
               Avbryt
             </button>
-            <button
-              onClick={createHousehold}
-              disabled={saving || !householdName}
-              style={{ flex: 2, padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
+            <button onClick={createHousehold} disabled={saving || !householdName} style={{ flex: 2, padding: '12px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
               {saving ? 'Skapar...' : 'Skapa hushåll'}
             </button>
           </div>

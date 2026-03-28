@@ -2,9 +2,15 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const HOUSEHOLD_TYPE_CONTEXT = {
+  barnfamilj: 'Hushållet är en barnfamilj — prioritera enkla rätter, milda smaker, snabb tillagning och barnvänliga alternativ.',
+  par: 'Hushållet är ett par — välkomna mer variation, matlagning som hobby och gärna romantiska middagar.',
+  singel: 'Hushållet är en singelperson — fokusera på små portioner, enkel matlagning, budgetvänliga och snabba alternativ.',
+  storformat: 'Hushållet lagar mat i storformat — fokusera på många portioner, ekonomisk matlagning och batch cooking.',
+  senior: 'Hushållet är seniorer — prioritera lättlagad, näringsrik mat med inte för starka smaker.',
+}
 
 export async function POST(request) {
   try {
@@ -17,39 +23,42 @@ export async function POST(request) {
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        {
-          cookies: {
-            getAll() { return cookieStore.getAll() },
-            setAll() {},
-          },
-        }
+        { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
       )
 
-      const { data: household } = await supabase
-        .from('households')
-        .select('*')
-        .eq('id', householdId)
-        .single()
-
-      const { data: prefs } = await supabase
-        .from('household_preferences')
-        .select('*')
-        .eq('household_id', householdId)
-        .single()
-
-      console.log('household:', household)
-      console.log('prefs:', prefs)
+      const [{ data: household }, { data: prefs }, { data: ratings }] = await Promise.all([
+        supabase.from('households').select('*').eq('id', householdId).single(),
+        supabase.from('household_preferences').select('*').eq('household_id', householdId).single(),
+        supabase.from('meal_ratings').select('rating, recipes(title)').eq('household_id', householdId),
+      ])
 
       if (household) {
-        householdContext = `
-Du hjälper hushållet "${household.display_name || household.name}" med matplanering.
-Hushållet består av ${household.adults} vuxna och ${household.children} barn.
-Veckbudget för mat: ${household.weekly_budget} kr.
-${prefs?.allergies?.length > 0 ? `Allergier och intoleranser: ${prefs.allergies.join(', ')}.` : ''}
-${prefs?.diet_preferences?.length > 0 ? `Kostpreferenser: ${prefs.diet_preferences.join(', ')}.` : ''}
-${prefs?.favorite_foods?.length > 0 ? `Favoriträtter: ${prefs.favorite_foods.join(', ')}.` : ''}
-${prefs?.disliked_foods?.length > 0 ? `Undviker: ${prefs.disliked_foods.join(', ')}.` : ''}
-        `.trim()
+        const portionPct = prefs?.portion_modifier ? Math.round(prefs.portion_modifier * 100) : 100
+        const typeContext = HOUSEHOLD_TYPE_CONTEXT[household.household_type] || ''
+
+        // Betygshistorik — recept under 3 undviks, över 4 föredras
+        let ratingContext = ''
+        if (ratings && ratings.length > 0) {
+          const favs = ratings.filter(r => r.rating >= 4 && r.recipes?.title).map(r => r.recipes.title)
+          const avoid = ratings.filter(r => r.rating <= 2 && r.recipes?.title).map(r => r.recipes.title)
+          if (favs.length > 0) ratingContext += `\nOmtyckta recept (betyg 4–5): ${[...new Set(favs)].join(', ')}.`
+          if (avoid.length > 0) ratingContext += `\nUndvik dessa recept (betyg 1–2): ${[...new Set(avoid)].join(', ')}.`
+        }
+
+        householdContext = [
+          `Du hjälper hushållet "${household.display_name || household.name}" med matplanering.`,
+          `Hushållet består av ${household.adults} vuxna och ${household.children} barn.`,
+          `Veckbudget för mat: ${household.weekly_budget} kr.`,
+          typeContext,
+          prefs?.allergies?.length ? `Allergier och intoleranser: ${prefs.allergies.join(', ')}.` : '',
+          prefs?.diet_preferences?.length ? `Kostpreferenser: ${prefs.diet_preferences.join(', ')}.` : '',
+          prefs?.favorite_foods?.length ? `Favoriträtter: ${prefs.favorite_foods.join(', ')}.` : '',
+          prefs?.disliked_foods?.length ? `Undviker: ${prefs.disliked_foods.join(', ')}.` : '',
+          portionPct !== 100 ? `Portionsstorlek: ${portionPct}% av standard.` : '',
+          prefs?.diverse_menu === true ? 'Variera menyn — undvik samma proteinkälla två dagar i rad.' : '',
+          prefs?.diverse_menu === false ? 'Hushållet föredrar konsekvent matlagningsstil.' : '',
+          ratingContext,
+        ].filter(Boolean).join('\n').trim()
       }
     }
 
@@ -65,15 +74,9 @@ ${householdContext}`,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    return Response.json({
-      success: true,
-      content: message.content[0].text,
-    })
+    return Response.json({ success: true, content: message.content[0].text })
   } catch (error) {
     console.error('AI error:', error)
-    return Response.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return Response.json({ success: false, error: error.message }, { status: 500 })
   }
 }

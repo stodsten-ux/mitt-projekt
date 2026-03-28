@@ -10,9 +10,18 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="sv">
-      <body style={{ paddingBottom: '70px' }}>
-        {children}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+            else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          } catch(e) {}
+        ` }} />
+      </head>
+      <body style={{ paddingTop: '56px' }}>
         <Navbar />
+        {children}
       </body>
     </html>
   )
