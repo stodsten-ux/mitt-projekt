@@ -87,6 +87,11 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <ThemeToggle />
         {householdId && (
+          <Link href="/campaigns" title="Kampanjer & erbjudanden" style={{ color: 'var(--text-muted)', fontSize: '18px', padding: '6px', lineHeight: 1, textDecoration: 'none' }}>
+            🏷️
+          </Link>
+        )}
+        {householdId && (
           <Link href="/panic" title="Vad kan jag laga?" style={{ color: 'var(--text-muted)', fontSize: '18px', padding: '6px', lineHeight: 1, textDecoration: 'none' }}>
             🆘
           </Link>

@@ -20,6 +20,8 @@ export default function ShoppingPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [priceLoading, setPriceLoading] = useState(false)
   const [priceResults, setPriceResults] = useState(null)
+  const [campaignLoading, setCampaignLoading] = useState(false)
+  const [campaignResults, setCampaignResults] = useState(null)
   const [addName, setAddName] = useState('')
   const [addCategory, setAddCategory] = useState('Övrigt')
   const [showAdd, setShowAdd] = useState(false)
@@ -119,6 +121,22 @@ export default function ShoppingPage() {
     setPriceLoading(false)
   }
 
+  async function fetchCampaignTips() {
+    if (!activeList || items.length === 0) return
+    setCampaignLoading(true)
+    setCampaignResults(null)
+    const uncheckedItems = items.filter(i => !i.checked).map(i => i.name)
+    const response = await fetch('/api/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: uncheckedItems, stores: preferredStores, householdId, weekOffset: 0 }),
+    })
+    const data = await response.json()
+    if (data.success) setCampaignResults(data)
+    else alert('Kunde inte hämta kampanjtips.')
+    setCampaignLoading(false)
+  }
+
   async function createEmptyList() {
     const title = `Inköpslista ${new Date().toLocaleDateString('sv-SE')}`
     const { data } = await supabase.from('shopping_lists').insert({ household_id: householdId, title, created_by: user.id }).select().single()
@@ -197,6 +215,9 @@ export default function ShoppingPage() {
             <button onClick={findBestPrices} disabled={priceLoading || items.filter(i => !i.checked).length === 0} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: items.length === 0 ? 'var(--text-muted)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: items.length === 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
               {priceLoading ? <><Spinner />&nbsp;Söker priser...</> : '💰 Hitta bästa pris'}
             </button>
+            <button onClick={fetchCampaignTips} disabled={campaignLoading || items.filter(i => !i.checked).length === 0} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: items.length === 0 ? 'var(--text-muted)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: items.length === 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
+              {campaignLoading ? <><Spinner />&nbsp;Söker tips...</> : '🏷️ Kampanjtips'}
+            </button>
           </div>
 
           {/* Prisresultat */}
@@ -230,6 +251,46 @@ export default function ShoppingPage() {
               </div>
               {priceResults.disclaimer && (
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{priceResults.disclaimer}</p>
+              )}
+            </div>
+          )}
+
+          {campaignResults && (
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>🏷️ Kampanjtips</h3>
+                <button onClick={() => setCampaignResults(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', lineHeight: 1 }}>×</button>
+              </div>
+              {campaignResults.seasonalTips && (
+                <div style={{ background: 'rgba(0,122,255,0.06)', border: '1px solid rgba(0,122,255,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '13px', color: 'var(--text)' }}>
+                  🌿 {campaignResults.seasonalTips}
+                </div>
+              )}
+              {campaignResults.recommendations?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                  {campaignResults.recommendations.map((rec, i) => (
+                    <div key={i} style={{ padding: '10px 0', borderBottom: i < campaignResults.recommendations.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text)' }}>
+                            {rec.item}
+                            {rec.bestStore && <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}> → {rec.bestStore}</span>}
+                          </p>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{rec.reason}</p>
+                        </div>
+                        <span style={{ padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', background: rec.urgency === 'hög' ? 'var(--success)' : rec.urgency === 'medel' ? 'var(--warning)' : 'var(--border)', color: 'white', flexShrink: 0 }}>
+                          {rec.action}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <a href="/campaigns" style={{ fontSize: '13px', color: 'var(--accent)', textDecoration: 'none', fontWeight: '500' }}>
+                Visa alla kampanjer →
+              </a>
+              {campaignResults.disclaimer && (
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '10px' }}>{campaignResults.disclaimer}</p>
               )}
             </div>
           )}
