@@ -38,8 +38,8 @@
   --success:  #2D8A4E;
 
   /* Typografi */
-  --font-heading: var(--font-playfair), Georgia, serif;
-  --font-body:    var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
 
   /* Radier */
   --radius-sm:  8px;

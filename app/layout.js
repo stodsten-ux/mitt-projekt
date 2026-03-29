@@ -1,20 +1,5 @@
 import './globals.css'
-import { Playfair_Display, Inter } from 'next/font/google'
 import Navbar from '../components/Navbar'
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-  weight: ['400', '600', '700'],
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-})
 
 export const metadata = {
   title: 'Mathandelsagenten — Planera, handla och laga smartare',
@@ -30,8 +15,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="sv" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="sv">
       <head>
+        {/* Tema-script — körs innan render för att undvika flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme');
@@ -39,6 +25,13 @@ export default function RootLayout({ children }) {
             else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
           } catch(e) {}
         ` }} />
+        {/* Google Fonts — Playfair Display + Inter */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body style={{ paddingTop: '56px' }}>
         <Navbar />
