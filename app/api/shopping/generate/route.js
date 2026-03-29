@@ -51,8 +51,16 @@ Returnera BARA JSON i detta format:
 Inkludera alla ingredienser som behövs. Returnera BARA JSON-arrayen.`,
     }],
   })
-  const jsonStr = message.content[0].text.replace(/```json\n?|\n?```/g, '').trim()
-  return JSON.parse(jsonStr)
+  const raw = message.content[0].text
+  const start = raw.indexOf('[')
+  if (start === -1) throw new Error('AI returnerade ingen ingredienslista')
+  let depth = 0, end = -1
+  for (let i = start; i < raw.length; i++) {
+    if (raw[i] === '[') depth++
+    else if (raw[i] === ']') { depth--; if (depth === 0) { end = i; break } }
+  }
+  if (end === -1) throw new Error('AI returnerade ofullständig JSON')
+  return JSON.parse(raw.slice(start, end + 1))
 }
 
 export async function POST(request) {

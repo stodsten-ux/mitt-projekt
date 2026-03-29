@@ -16,7 +16,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="sv">
+    <html lang="sv" data-scroll-behavior="smooth">
       <head>
         {/* Tema-script — körs innan render för att undvika flash */}
         <script dangerouslySetInnerHTML={{ __html: `

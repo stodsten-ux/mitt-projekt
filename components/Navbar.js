@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '../lib/supabase'
+import { Home, Settings, ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 
 const supabase = createClient()
 
@@ -101,12 +102,11 @@ export default function Navbar() {
                 alignItems: 'center',
                 gap: '5px',
                 maxWidth: '160px',
-                overflow: 'hidden',
               }}
             >
-              <span>🏠</span>
+              <Home size={14} style={{ flexShrink: 0 }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{householdName}</span>
-              <span style={{ fontSize: '10px', opacity: 0.6, flexShrink: 0 }}>▾</span>
+              <ChevronDown size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
             </button>
 
             {dropdownOpen && (
@@ -126,7 +126,9 @@ export default function Navbar() {
                   href={`/household/${householdId}`}
                   onClick={() => setDropdownOpen(false)}
                   style={{
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                     padding: '12px 16px',
                     textDecoration: 'none',
                     color: 'var(--text)',
@@ -134,13 +136,15 @@ export default function Navbar() {
                     borderBottom: '1px solid var(--border)',
                   }}
                 >
-                  🏠 Mitt hushåll
+                  <Home size={15} /> Mitt hushåll
                 </Link>
                 <Link
                   href="/household"
                   onClick={() => setDropdownOpen(false)}
                   style={{
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                     padding: '12px 16px',
                     textDecoration: 'none',
                     color: 'var(--text)',
@@ -148,12 +152,14 @@ export default function Navbar() {
                     borderBottom: '1px solid var(--border)',
                   }}
                 >
-                  🔄 Byt hushåll
+                  <RefreshCw size={15} /> Byt hushåll
                 </Link>
                 <button
                   onClick={handleLogout}
                   style={{
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                     width: '100%',
                     padding: '12px 16px',
                     background: 'none',
@@ -164,7 +170,7 @@ export default function Navbar() {
                     textAlign: 'left',
                   }}
                 >
-                  Logga ut
+                  <LogOut size={15} /> Logga ut
                 </button>
               </div>
             )}
@@ -187,11 +193,10 @@ export default function Navbar() {
             borderRadius: '8px',
             border: '1px solid var(--border)',
             textDecoration: 'none',
-            fontSize: '16px',
             color: 'var(--text-muted)',
           }}
         >
-          ⚙️
+          <Settings size={16} />
         </Link>
       </div>
     </nav>

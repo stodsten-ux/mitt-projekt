@@ -81,7 +81,7 @@ export default function RecipeDetailPage() {
     router.push('/recipes')
   }
 
-  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
+  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
   if (!recipe) return null
 
   const baseServings = recipe.servings || 4

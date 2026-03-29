@@ -882,3 +882,673 @@ Användaren söker recept
 6. 🔲 Lärande hushållsprofil
 7. 🔲 Dietist-funktion & kostråd
 8. 🔲 Receptdatabas från externa källor
+
+---
+---
+
+## DE TRE LÄGENA — Kärnarkitektur
+
+Appen har tre tydligt separerade lägen i navbaren:
+[📅 Planera]  [🛍️ Handla]  [👨‍🍳 Laga]
+
+Varje läge har sitt eget optimerade UI och användarsituation.
+
+---
+
+### LÄGE 1 — 📅 Planera (befintligt, vidareutvecklas)
+Används hemma i förväg. Fokus på ekonomi och variation.
+Sidor: /menu, /recipes, /pantry, /shopping (skapande)
+
+---
+
+### LÄGE 2 — 🛍️ Handla
+**Fil:** app/shopping/active/page.js
+**Syfte:** Optimerat för användning i butiken
+
+**UI-krav:**
+- Extremt enkelt — bara listan
+- Touch-ytor minst 60px höjd
+- Grupperat per kategori med emoji-rubriker
+- Progressbar: "X av Y varor klara"
+- Offlineläge via PWA service worker (cachelagra listan)
+- Skärmen slocknar inte (Wake Lock API)
+
+**Funktioner:**
+- Bocka av varor → checked: true, genomstruken text
+- Ångra bock → checked: false
+- Visa/dölj kategorier
+- Knapp: "Navigera till butik" → öppnar Google Maps
+- När alla varor är bockade → "Flytta till skafferi?" modal
+
+**Wake Lock API:**
+```javascript
+// Förhindra att skärmen slocknar i handlaläget
+const wakeLock = await navigator.wakeLock.request('screen')
+// Släpp när användaren lämnar sidan
+wakeLock.release()
+```
+
+---
+
+### LÄGE 3 — 👨‍🍳 Laga
+**Fil:** app/cook/[recipeId]/page.js
+**Syfte:** Optimerat för användning vid spisen
+
+**UI-krav:**
+- Ett steg i taget — fullskärm per steg
+- Textstorlek minst 20px
+- Skärmen slocknar aldrig (Wake Lock API)
+- Portionsjustering överst innan start
+- Progressindikator: "Steg X av Y"
+
+**Funktioner:**
+
+1. **Steg-för-steg-navigering**
+   - Svep vänster/höger mellan steg (touch gesture)
+   - Knappar: [← Föregående] [Nästa steg →]
+   - Sista steget: [✅ Klart! Betygsätt rätten]
+
+2. **Inbyggd timer**
+   - Varje steg kan ha en timer (hämtas från recipe.steps[n].timer_seconds)
+   - Knapp: "⏱️ Starta timer X min"
+   - Timer körs i bakgrunden
+   - Notifikation när timer är klar (Web Notifications API)
+   - Visar nedräkning tydligt
+
+3. **Portionsjustering**
+   - [−] antal portioner [+] överst på sidan
+   - Alla ingrediensmängder räknas om i realtid
+   - Multiplicera med (valda portioner / receptets portioner)
+
+4. **Substitutfunktion**
+   - Varje ingrediens har en liten knapp "💡 Substitut?"
+   - Anropar /api/ai med prompt:
+     "Vad kan jag använda istället för [ingrediens] i [rätt]?
+      Hushållet är laktosfritt och undviker fisk.
+      Ge ett kort praktiskt svar på max 2 meningar."
+   - Visas som en liten popup under ingrediensen
+
+5. **Röststyrning (Web Speech API)**
+   - Aktiveras med knapp: "🎤 Röststyrning på"
+   - Kommandon:
+     - "Nästa steg" / "Nästa"
+     - "Föregående steg" / "Föregående"  
+     - "Starta timer"
+     - "Stoppa timer"
+     - "Hur mycket [ingrediens]?" → läser upp mängden
+     - "Substitut för [ingrediens]?" → frågar Claude
+
+6. **Betygsättning vid avslut**
+   - Visas automatiskt när sista steget är klart
+   - 1-5 stjärnor
+   - Valfri kommentar: "Barnen tyckte om den!"
+   - Sparas i meal_ratings
+   - Knapp: "Spara till skafferiet" → lägger rester i pantry
+
+**Datamodell — lägg till steps i recipes:**
+```sql
+-- Recipes behöver strukturerade steg (inte bara instructions som text)
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS 
+  steps JSONB;
+-- Format: [{"text": "Fräs löken...", "timer_seconds": 300}]
+
+-- Migrera befintliga instructions till steps automatiskt via AI
+-- när ett recept öppnas i lagaläget första gången
+```
+
+**Flöde från meny till lagaläge:**
+```
+/menu → klicka på en rätt → /recipes/[id] → 
+[👨‍🍳 Börja laga] → /cook/[recipeId]
+```
+
+---
+
+### Navigation mellan lägena
+
+**Uppdatera Navbar.js:**
+```
+Vänster: 🛒 Mathandelsagenten
+Mitten:  [📅 Planera] [🛍️ Handla] [👨‍🍳 Laga]
+Höger:   🏠 Hushåll  ⚙️  Logga ut
+```
+
+- Aktivt läge markeras tydligt
+- Appen minns senaste läge via localStorage
+- Smidig övergång mellan lägena
+
+---
+
+### PWA — Offlinestöd för handlaläget
+
+Service workern ska cachelagra:
+- Aktiv inköpslista
+- Aktiva recept (för lagaläget)
+- Hushållspreferenser
+```javascript
+// I next.config.js — uppdatera next-pwa config
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  runtimeCaching: [
+    {
+      urlPattern: /\/api\/shopping/,
+      handler: 'NetworkFirst',
+      options: { cacheName: 'shopping-cache' }
+    }
+  ]
+})
+```
+
+---
+---
+
+## DESIGN — Naturlig & Organisk
+
+### Färgpalett (CSS-variabler i globals.css)
+```css
+:root {
+  --color-forest:     #2D4A3E;
+  --color-sage:       #7C9A82;
+  --color-cream:      #F5F0E8;
+  --color-warm-gray:  #E8E0D4;
+  --color-soil:       #8B6914;
+  --color-terracotta: #C4622D;
+  --color-text:       #1A1A1A;
+  --color-muted:      #6B6B6B;
+  --color-border:     #D4CCC0;
+  --bg:               var(--color-cream);
+  --bg-card:          #FFFFFF;
+  --accent:           var(--color-forest);
+  --accent-text:      #FFFFFF;
+  --cta:              var(--color-terracotta);
+}
+
+[data-theme='dark'] {
+  --bg:               #1C1F1A;
+  --bg-card:          #252923;
+  --color-text:       #F0EDE6;
+  --color-muted:      #A0A89A;
+  --color-border:     #3A3F38;
+  --accent:           var(--color-sage);
+  --accent-text:      #1A1A1A;
+}
+```
+
+### Typografi
+- Rubriker: Playfair Display (Google Fonts)
+- Brödtext: Inter (Google Fonts)
+- Importera via next/font/google i layout.js
+
+### Bilder
+- Lägg till image_url i recipes-tabellen
+- Använd next/image för alla bilder
+- Format: WebP, lazy loading
+- Fallback: gradient i --color-forest om ingen bild finns
+- Bildkällor: Unsplash API (gratis, ingen nyckel för basic)
+
+### Kortdesign
+- border-radius: 16px
+- box-shadow: 0 2px 12px rgba(0,0,0,0.08)
+- overflow: hidden (för bilder)
+- hover: translateY(-2px), starkare shadow (200ms ease)
+
+### Animationer
+- Sidövergångar: fade + translateY(8px), 300ms
+- Kort: scale(0.97→1), 200ms
+- Bocka av: scale-pulse + genomstrykning
+- Timer: puls-animation
+- Laga-steg: slide-transition
+
+### Navigation
+- Mobil: bottom navigation med ikoner
+- Desktop: top navbar
+- Aktiv sida: --color-forest bakgrund, vit text
+- Ikoner: emoji eller Lucide React-ikoner
+
+### Onboarding-skärm (app/page.js för utloggade)
+- Fullbredd matbild som hero
+- Appnamn + tagline
+- CTA: "Kom igång gratis" + "Logga in"
+- Publik — ingen inloggning krävs för att se den
+
+---
+
+## SEO
+
+### Metadata (app/layout.js)
+- title: "Mathandelsagenten — Planera, handla och laga smartare"
+- description: 60-160 tecken med primära sökord
+- openGraph med bild 1200x630px
+- locale: sv_SE
+- canonical URL
+
+### Strukturerad data
+- Recipe schema på alla receptsidor
+- Organization schema på startsidan
+- BreadcrumbList på undersidor
+
+### Landningssida
+- app/om/page.js — publik sida utan inloggning
+- Optimerad för sökord: matplanering, veckomenyn, inköpslista
+- FAQ-sektion med vanliga frågor
+
+### Prestanda
+- Alla bilder via next/image med width/height
+- WebP-format
+- Lazy loading under fold
+- Font-optimering via next/font
+
+---
+---
+
+## ARKITEKTUR-OMBYGGNAD — Prioritet AKUT
+
+### Problem att lösa
+1. Laga-sidan ger 404 — sidan saknas
+2. Navbar och dashboard duplicerar samma navigation
+3. Navbaren är rörig med för många element
+4. Dashboard saknar eget syfte och värde
+
+---
+
+### NY NAVBAR — enkel och tydlig
+**Fil:** components/Navbar.js — ersätt helt befintlig
+
+**Layout desktop:**
+```
+vänster:  🌿 Mathandel (länk till /)
+höger:    [🏠 Fam Hallgren ▾]  [⚙️]
+```
+
+**Regler:**
+- INGA lägesväljare i navbaren
+- INGEN måne/tema-toggle i navbaren (flytta till ⚙️-sidan)
+- INGEN SOS-knapp i navbaren (flytta till dashboarden)
+- Hushållsnamnet är en dropdown med:
+  - Länk till /household/[id]
+  - Byt hushåll (om flera finns)
+  - Logga ut
+
+---
+
+### NY LÄGESVÄLJARE — tab-bar under navbar
+**Fil:** components/ModeSelector.js — ny komponent
+
+Visas som en tab-bar direkt under navbaren på ALLA sidor utom:
+- /auth/login
+- /auth/register
+- /cook/[recipeId] (lagaläget är fullskärm)
+
+**Layout:**
+```
+[📅 Planera]  [🛍️ Handla]  [👨‍🍳 Laga]
+```
+
+**Regler:**
+- Aktivt läge: bakgrund --color-forest, vit text
+- Inaktivt läge: transparent, --color-muted text
+- Klick på Planera → /menu
+- Klick på Handla → /shopping
+- Klick på Laga → /cook (lista över veckans rätter)
+- Mobil: full bredd, tre lika stora knappar
+- Desktop: centrerad, max-width 400px
+
+---
+
+### NY DASHBOARD — statusöversikt
+**Fil:** app/page.js — ersätt helt befintlig
+
+**Syfte:** Visa vad som händer just nu — inte navigationsalternativ
+
+**Layout:**
+```
+┌─────────────────────────────────────┐
+│ Hej [förnamn]! 👋                   │
+│ [Veckodag] vecka [X]                │
+├─────────────────────────────────────┤
+│ 👨‍🍳 IKVÄLL LAGAR VI               │
+│ [Receptbild]  Pasta carbonara       │
+│               35 min · 5 port.      │
+│               [Börja laga →]        │
+├─────────────────────────────────────┤
+│ 📅 DENNA VECKA                      │
+│ Mån ✅  Tis ✅  Ons ➕              │
+│ Tor ➕  Fre ➕  Lör ➕  Sön ➕      │
+│ [Planera veckan →]                  │
+├─────────────────────────────────────┤
+│ 🛍️ INKÖPSLISTA                     │
+│ 12 varor · Est. 450 kr              │
+│ [Öppna listan →]                    │
+├─────────────────────────────────────┤
+│ ⚠️ SKAFFERIET                       │
+│ Kycklingfilé går ut imorgon         │
+│ [Se skafferiet →]                   │
+├─────────────────────────────────────┤
+│ 🆘 Panikknapp                       │
+│ "Vad kan jag laga just nu?"         │
+│ [Visa vad jag har hemma →]          │
+└─────────────────────────────────────┘
+```
+
+**Logik:**
+- "Ikväll lagar vi" → hämta dagens menu_item baserat på veckodagen
+- Om ingen rätt planerad idag → visa "Inget planerat — [Välj recept]"
+- Veckoöversikt → hämta menu_items för innevarande vecka
+- ✅ = recipe_id finns, ➕ = saknas (klickbar → /menu)
+- Inköpslista → hämta senaste aktiva shopping_list
+- Skafferiet → hämta pantry WHERE expires_at <= NOW() + 2 dagar
+- Panikknapp → länk till /panic
+
+**Hälsning baserad på tid:**
+```javascript
+const hour = new Date().getHours()
+const greeting = hour < 12 ? 'God morgon' : 
+                 hour < 17 ? 'God eftermiddag' : 
+                 'God kväll'
+```
+
+---
+
+### NY LAGA-SIDA — två nivåer
+**Problem:** /cook ger 404 för det saknas en indexsida
+
+**Fil 1:** app/cook/page.js — lista över veckans rätter
+**Fil 2:** app/cook/[recipeId]/page.js — steg-för-steg (redan specad)
+
+**app/cook/page.js — layout:**
+```
+👨‍🍳 Laga
+
+IDAG — Tisdag
+┌─────────────────────────────┐
+│ [Bild]  Pasta carbonara     │
+│         35 min · 5 port.    │
+│         [Börja laga →]      │
+└─────────────────────────────┘
+
+DENNA VECKA
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Mån ✅   │ │ Ons      │ │ Tor      │
+│ Kyckling │ │ Tacos    │ │ Pizza    │
+│ [Laga]   │ │ [Laga]   │ │ [Laga]   │
+└──────────┘ └──────────┘ └──────────┘
+
+TIDIGARE FAVORITER ⭐
+Recept med betyg 4+ från meal_ratings
+```
+
+**app/cook/[recipeId]/page.js — steg-för-steg:**
+Se tidigare spec under "LÄGE 3 — 👨‍🍳 Laga"
+
+**Viktigt — migrera instructions till steps:**
+När ett recept öppnas i lagaläget första gången:
+1. Kontrollera om recipe.steps är null
+2. Om null → anropa /api/ai för att konvertera instructions till steps-array
+3. Spara steps i databasen
+4. Visa steg-för-steg
+```javascript
+// Prompt för att konvertera instructions till steps
+`Konvertera dessa matlagningsinstruktioner till separata steg.
+Returnera ENDAST giltig JSON utan markdown:
+[
+  {"text": "Steg-beskrivning", "timer_seconds": 300},
+  {"text": "Nästa steg utan timer", "timer_seconds": null}
+]
+Instructions: "${recipe.instructions}"`
+```
+
+---
+
+### NY HANDLA-SIDA — förenklad
+**Fil:** app/shopping/page.js — uppdatera befintlig
+
+**Lägg till överst på sidan:**
+- Tydlig rubrik: "🛍️ Handla"
+- Knapp: "Generera från veckomenyn" om listan är tom
+- Progressbar: "X av Y varor klara"
+- Knapp: "Navigera till butik" → Google Maps med butikens adress
+
+---
+
+### FILSTRUKTUR EFTER OMBYGGNAD
+```
+app/
+  page.js                  # Dashboard — statusöversikt (BYGG OM)
+  cook/
+    page.js                # Laga — lista veckans rätter (NY)
+    [recipeId]/page.js     # Laga — steg-för-steg (NY)
+  panic/
+    page.js                # Panikfunktion (NY)
+components/
+  Navbar.js                # Förenklad navbar (BYGG OM)
+  ModeSelector.js          # Tab-bar Planera/Handla/Laga (NY)
+```
+
+---
+
+### INSTRUKTION TILL CLAUDE CODE
+Genomför ombyggnaden i denna ordning:
+
+1. **Bygg app/cook/page.js** — fix 404-felet först
+2. **Bygg om components/Navbar.js** — ta bort röran
+3. **Bygg components/ModeSelector.js** — ny tab-bar
+4. **Bygg om app/page.js** — ny statusöversikt dashboard
+5. **Uppdatera app/layout.js** — lägg till ModeSelector under Navbar
+6. **Bygg app/cook/[recipeId]/page.js** — steg-för-steg lagaläge
+
+---
+---
+
+## DESIGN UPGRADE — Ikoner, bilder och känsla
+
+### Byt ut ALLA emojis mot Lucide React-ikoner
+Lucide React är redan installerat. Använd konsekvent genom hela appen.
+```javascript
+import {
+  ChefHat,          // 👨‍🍳 Laga-läget
+  ShoppingBag,      // 🛍️ Handla-läget
+  CalendarDays,     // 📅 Planera-läget
+  Refrigerator,     // 🥦 Skafferi
+  Sparkles,         // ✨ AI-förslag
+  AlertCircle,      // 🆘 Panikknapp
+  Settings,         // ⚙️ Inställningar
+  Home,             // 🏠 Hushåll
+  Sun, Sunset,      // Hälsning beroende på tid
+  Moon,             // 🌙 Mörkt läge
+  Star,             // ⭐ Betyg
+  Timer,            // ⏱️ Timer i lagaläget
+  Mic,              // 🎤 Röststyrning
+  ChevronRight,     // → Navigeringspil
+  Check,            // ✅ Bockad vara
+  Plus,             // + Lägg till
+  Minus,            // - Ta bort
+  Search,           // 🔍 Sök
+  BookOpen,         // 📖 Recept
+  TrendingDown,     // 💰 Prisjämförelse
+} from 'lucide-react'
+```
+
+---
+
+### Unsplash-integration för matbilder
+
+**API-nyckel:** `process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY`
+
+**Hjälpfunktion — skapa lib/unsplash.js:**
+```javascript
+// Hämta en matbild baserat på receptnamn eller kategori
+export async function getRecipeImage(query) {
+  const key = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY
+  const res = await fetch(
+    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape&client_id=${key}`
+  )
+  const data = await res.json()
+  return data.results?.[0]?.urls?.regular || null
+}
+
+// Kategoribilder för fallback
+export const categoryImages = {
+  kyckling: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c4?w=800',
+  pasta:    'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=800',
+  fisk:     'https://images.unsplash.com/photo-1485921325833-c519f76c4927?w=800',
+  vegetarisk:'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800',
+  soppa:    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800',
+  tacos:    'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800',
+  pizza:    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800',
+  default:  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+}
+
+// Välj fallback-bild baserat på receptnamn
+export function getFallbackImage(title) {
+  const t = title.toLowerCase()
+  if (t.includes('kyckling')) return categoryImages.kyckling
+  if (t.includes('pasta') || t.includes('carbonara')) return categoryImages.pasta
+  if (t.includes('lax') || t.includes('fisk')) return categoryImages.fisk
+  if (t.includes('tacos')) return categoryImages.tacos
+  if (t.includes('pizza')) return categoryImages.pizza
+  if (t.includes('soppa')) return categoryImages.soppa
+  if (t.includes('vegetarisk') || t.includes('linser')) return categoryImages.vegetarisk
+  return categoryImages.default
+}
+```
+
+---
+
+### Dashboard — inbjudande redesign
+
+**Gradient-header baserat på tid på dygnet:**
+```javascript
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 5)  return { text: 'God natt',       icon: Moon,   gradient: 'from-slate-900 to-slate-700' }
+  if (h < 10) return { text: 'God morgon',     icon: Sun,    gradient: 'from-amber-400 to-orange-500' }
+  if (h < 12) return { text: 'God förmiddag',  icon: Sun,    gradient: 'from-yellow-400 to-amber-500' }
+  if (h < 17) return { text: 'God eftermiddag',icon: Sun,    gradient: 'from-green-700 to-emerald-600' }
+  if (h < 21) return { text: 'God kväll',      icon: Sunset, gradient: 'from-orange-500 to-red-600' }
+  return       { text: 'God kväll',             icon: Moon,   gradient: 'from-indigo-800 to-purple-900' }
+}
+```
+
+**Hero-sektion med gradient och matbild:**
+```
+┌─────────────────────────────────────────┐
+│  [Matbild som bakgrund med overlay]     │
+│                                         │
+│  God kväll, Jonas 👋                   │
+│  Söndag · Vecka 13                      │
+│                                         │
+│  ┌─────────────────┐                   │
+│  │ 🍳 Ikväll lagar │                   │
+│  │ Ugnspannkaka    │                   │
+│  │ [Börja laga →]  │                   │
+│  └─────────────────┘                   │
+└─────────────────────────────────────────┘
+```
+
+**Implementering av hero:**
+```javascript
+// Hämta bild för ikväll-rätten och använd som hero-bakgrund
+<div style={{
+  background: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${heroImage})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  borderRadius: '20px',
+  padding: '40px',
+  color: 'white',
+  minHeight: '200px',
+}}>
+```
+
+**Veckans dagar — med matbilder:**
+```
+┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐
+│[bild]│ │[bild]│ │  +   │ │  +   │
+│ Mån  │ │ Tis  │ │ Ons  │ │ Tor  │
+│Kyckling│Pasta│      │      │
+└──────┘ └──────┘ └──────┘ └──────┘
+```
+
+---
+
+### Receptkort — Spotify-inspirerat med bild
+```javascript
+// Varje receptkort ska ha:
+<div style={{
+  borderRadius: '16px',
+  overflow: 'hidden',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+  transition: 'transform 200ms ease, box-shadow 200ms ease',
+  cursor: 'pointer',
+}}>
+  {/* Bild 16:9 */}
+  <img 
+    src={getFallbackImage(recipe.title)}
+    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }}
+  />
+  {/* Info */}
+  <div style={{ padding: '16px' }}>
+    <h3>{recipe.title}</h3>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <Star size={14} /> <span>{avgRating}</span>
+      <Timer size={14} /> <span>35 min</span>
+      <Users size={14} /> <span>{recipe.servings} port.</span>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+### 404-sidan för Laga — fix
+
+**Problemet:** Laga-länken i navbaren pekar på `/cook` men sidan saknas.
+
+**Fix 1 — Skapa app/cook/page.js:**
+Visa en lista över veckans planerade rätter att välja bland:
+```
+👨‍🍳 Vad ska vi laga?
+
+[Receptbild] Ugnspannkaka med fläsk    [Börja laga →]
+[Receptbild] Kycklinggryta             [Börja laga →]
+[Receptbild] Pasta carbonara           [Börja laga →]
+```
+
+**Fix 2 — Skapa app/cook/[recipeId]/page.js:**
+Steg-för-steg lagningssida enligt specen i DE TRE LÄGENA-avsnittet.
+
+**Fix 3 — Uppdatera navbar-länken:**
+```javascript
+// Laga ska länka till /cook, inte /laga
+{ href: '/cook', label: 'Laga', icon: ChefHat }
+```
+
+---
+
+### Mobilnavigation — bottom bar
+
+På mobil ska navigationen flyttas till botten:
+```javascript
+// Visa bottom navigation på skärmar < 768px
+@media (max-width: 768px) {
+  .top-nav { display: none }
+  .bottom-nav { display: flex }
+}
+
+// Bottom navigation layout:
+┌────────────────────────────────────┐
+│  📅        🛍️        👨‍🍳       🏠  │
+│ Planera   Handla    Laga    Hem   │
+└────────────────────────────────────┘
+```
+
+---
+
+### Prioritetsordning för Claude Code
+
+1. **Akut:** Fixa 404 — skapa /cook/page.js och /cook/[recipeId]/page.js
+2. **Viktig:** Byt alla emojis mot Lucide React-ikoner
+3. **Viktig:** Skapa lib/unsplash.js med getFallbackImage
+4. **Design:** Lägg till matbilder på receptkort och dagskort
+5. **Design:** Hero-sektion på dashboarden med gradient + bakgrundsbild
+6. **Mobil:** Bottom navigation på små skärmar

@@ -2,9 +2,18 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 function isMatch(pantryName, ingredientName) {
-  const p = pantryName.toLowerCase()
-  const i = ingredientName.toLowerCase()
-  return p.includes(i) || i.includes(p)
+  const p = pantryName.toLowerCase().trim()
+  const i = ingredientName.toLowerCase().trim()
+  if (p === i) return true
+  // Kräv att matchningen sker på ordgräns — undviker att "Mjölk" matchar "Mjölkprodukt"
+  const wordBoundary = (haystack, needle) => {
+    const idx = haystack.indexOf(needle)
+    if (idx === -1) return false
+    const before = idx === 0 || /\s/.test(haystack[idx - 1])
+    const after = idx + needle.length === haystack.length || /\s/.test(haystack[idx + needle.length])
+    return before && after
+  }
+  return wordBoundary(p, i) || wordBoundary(i, p)
 }
 
 export async function POST(request) {

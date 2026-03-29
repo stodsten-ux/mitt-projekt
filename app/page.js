@@ -93,7 +93,7 @@ export default function DashboardPage() {
   }, [router])
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh', gap: '12px', color: 'var(--text-muted)' }}>
+    <div className="loading-screen-center">
       <Spinner />Laddar...
     </div>
   )

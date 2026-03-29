@@ -42,7 +42,7 @@ export default function InvitePage() {
         .select('id')
         .eq('household_id', inv.household_id)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (existing) { setStatus('already_member'); return }
 

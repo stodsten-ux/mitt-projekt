@@ -70,10 +70,18 @@ Returnera ENDAST giltig JSON utan markdown:
         })
 
         const raw = message.content[0].text.trim()
-        const jsonMatch = raw.match(/\{[\s\S]*\}/)
-        if (!jsonMatch) continue
-
-        const recipe = JSON.parse(jsonMatch[0])
+        // Extrahera första välbalanserade JSON-objekt
+        const start = raw.indexOf('{')
+        if (start === -1) continue
+        let depth = 0, end = -1
+        for (let i = start; i < raw.length; i++) {
+          if (raw[i] === '{') depth++
+          else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+        }
+        if (end === -1) continue
+        let recipe
+        try { recipe = JSON.parse(raw.slice(start, end + 1)) }
+        catch { continue }
 
         // Normera ingredienser till {name, quantity} format
         const ingredients = (recipe.ingredients || []).map(ing => ({

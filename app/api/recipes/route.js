@@ -66,8 +66,10 @@ ${prefs?.disliked_foods?.length ? `Undviker: ${prefs.disliked_foods.join(', ')}.
       }]
     })
 
-    const jsonStr = message.content[0].text.replace(/```json\n?|\n?```/g, '').trim()
-    const recipe = JSON.parse(jsonStr)
+    const rawText = message.content[0].text
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('AI returnerade inget giltigt JSON-recept')
+    const recipe = JSON.parse(jsonMatch[0])
 
     // 5. Spara automatiskt om householdId finns
     let savedId = null

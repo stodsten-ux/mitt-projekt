@@ -1,0 +1,15 @@
+# Miljövariabler och nycklar
+.env
+.env.local
+.env*.local
+
+# Supabase-config med nycklar
+.supabase/
+
+# Personliga anteckningar
+NOTES.md
+TODO-privat.md
+
+# Byggartefakter
+.next/
+node_modules/

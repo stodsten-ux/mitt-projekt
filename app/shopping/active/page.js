@@ -107,7 +107,7 @@ export default function ShoppingActivePage() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '12px', color: 'var(--text-muted)' }}>
+    <div className="loading-screen-center" style={{ height: '100vh' }}>
       <Spinner />Laddar lista...
     </div>
   )

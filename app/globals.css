@@ -281,6 +281,27 @@ h3 { font-size: 1.125rem; }
 .timer-active     { animation: timerPulse 1s ease infinite; }
 
 /* ───────────────────────────────────────────
+   LOADING SCREEN (används av alla sidor — undviker React 19 hydration-mismatch med inline flex+gap)
+─────────────────────────────────────────── */
+
+.loading-screen {
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.loading-screen-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80vh;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+/* ───────────────────────────────────────────
    SPINNER
 ─────────────────────────────────────────── */
 

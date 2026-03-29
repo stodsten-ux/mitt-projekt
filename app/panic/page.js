@@ -70,7 +70,7 @@ export default function PanicPage() {
     setSearching(false)
   }
 
-  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
+  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
 
   const selectedCount = Object.values(selected).filter(Boolean).length
 

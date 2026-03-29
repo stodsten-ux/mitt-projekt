@@ -66,7 +66,7 @@ export default function PantryPage() {
     setItems(prev => prev.filter(i => i.id !== id))
   }
 
-  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
+  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
 
   const expiringSoon = items.filter(i => { const d = daysUntilExpiry(i.expires_at); return d !== null && d <= 3 })
 

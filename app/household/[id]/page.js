@@ -41,6 +41,8 @@ export default function HouseholdDetailPage() {
   const [preferences, setPreferences] = useState(null)
   const [members, setMembers] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [memberEmails, setMemberEmails] = useState({})
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -55,6 +57,7 @@ export default function HouseholdDetailPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
+      setCurrentUser(user)
 
       const { data: h } = await supabase.from('households').select('*').eq('id', id).single()
       setHousehold(h)
@@ -72,6 +75,10 @@ export default function HouseholdDetailPage() {
 
       const { data: invites } = await supabase.from('household_invites').select('*').eq('household_id', id).eq('accepted', false).order('id', { ascending: false })
       setPendingInvites(invites || [])
+
+      // Bygg upp user_id → email från accepterade inbjudningar (om möjligt via invited email-match)
+      // Fallback: visa e-post för inloggad användare, "Anonym Medlem" för övriga
+      setMemberEmails({ [user.id]: user.email })
       setLoading(false)
     }
     load()
@@ -135,7 +142,7 @@ export default function HouseholdDetailPage() {
     setPreferences(prev => ({ ...prev, store_split: { ...(prev.store_split || {}), [store]: pct } }))
   }
 
-  if (loading) return <div style={{ padding: '40px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}><Spinner />Laddar...</div>
+  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
   if (!household) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Hushållet hittades inte.</div>
 
   const tabs = ['overview', 'preferences', 'members']
@@ -346,7 +353,12 @@ export default function HouseholdDetailPage() {
           <div style={{ marginBottom: '24px' }}>
             {members.map(member => (
               <div key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '8px' }}>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{member.user_id}</p>
+                <p style={{ fontSize: '14px', color: 'var(--text)' }}>
+                  {memberEmails[member.user_id]
+                    ? <>{memberEmails[member.user_id]} {member.user_id === currentUser?.id && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>(du)</span>}</>
+                    : <span style={{ color: 'var(--text-muted)' }}>Anonym Medlem</span>
+                  }
+                </p>
                 <span style={{ background: member.role === 'admin' ? 'var(--accent)' : 'var(--bg)', color: member.role === 'admin' ? 'var(--accent-text)' : 'var(--text-muted)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
                   {member.role === 'admin' ? 'Admin' : 'Medlem'}
                 </span>
