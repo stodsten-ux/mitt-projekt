@@ -170,6 +170,9 @@ export default function RecipeDetailPage() {
 
       {/* Åtgärder */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+        <Link href={`/cook/${id}`} style={{ display: 'block', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: '10px', textDecoration: 'none', fontSize: '15px', fontWeight: '700', textAlign: 'center' }}>
+          👨‍🍳 Börja laga
+        </Link>
         <button onClick={publishRecipe} disabled={publishing} style={{ padding: '13px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
           {publishing ? <><Spinner />&nbsp;Publicerar...</> : '🌍 Publicera till delade recept'}
         </button>
