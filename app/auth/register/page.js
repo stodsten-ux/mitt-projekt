@@ -26,7 +26,7 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)', marginTop: '-104px' }}>
         <div className="form-card animate-fade-in" style={{ textAlign: 'center' }}>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>📧</p>
           <h1 style={{ fontFamily: 'var(--font-heading)', marginBottom: '12px' }}>Kolla din e-post!</h1>

@@ -1,5 +1,6 @@
 import './globals.css'
 import Navbar from '../components/Navbar'
+import ModeSelector from '../components/ModeSelector'
 
 export const metadata = {
   title: 'Mathandelsagenten — Planera, handla och laga smartare',
@@ -33,8 +34,9 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body style={{ paddingTop: '56px' }}>
+      <body style={{ paddingTop: '104px' }}>
         <Navbar />
+        <ModeSelector />
         {children}
       </body>
     </html>

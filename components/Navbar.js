@@ -1,24 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '../lib/supabase'
-import ThemeToggle from './ThemeToggle'
 
 const supabase = createClient()
-
-const MODES = [
-  { label: '📅 Planera', paths: ['/menu', '/recipes', '/pantry', '/shopping'], href: '/menu' },
-  { label: '🛍️ Handla', paths: ['/shopping/active'], href: '/shopping/active' },
-  { label: '👨‍🍳 Laga', paths: ['/cook'], href: '/cook' },
-]
 
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const [household, setHousehold] = useState(null)
   const [householdId, setHouseholdId] = useState(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
 
   const hide = pathname.startsWith('/auth') || pathname.startsWith('/invite')
 
@@ -40,6 +35,16 @@ export default function Navbar() {
     loadHousehold()
   }, [hide])
 
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   if (hide) return null
 
   async function handleLogout() {
@@ -47,11 +52,7 @@ export default function Navbar() {
     router.push('/auth/login')
   }
 
-  const householdName = household?.display_name || household?.name
-
-  function isActiveMode(mode) {
-    return mode.paths.some(p => pathname === p || pathname.startsWith(p + '/'))
-  }
+  const householdName = household?.display_name || household?.name || 'Hushåll'
 
   return (
     <nav style={{
@@ -68,74 +69,130 @@ export default function Navbar() {
       padding: '0 16px',
       zIndex: 100,
       boxShadow: 'var(--shadow)',
-      gap: '12px',
     }}>
       {/* Vänster: appnamn */}
-      <Link href="/" style={{ textDecoration: 'none', color: 'var(--accent)', fontWeight: '700', fontSize: '15px', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-heading)' }}>
-        🛒 Mathandel
+      <Link href="/" style={{
+        textDecoration: 'none',
+        color: 'var(--accent)',
+        fontWeight: '700',
+        fontSize: '16px',
+        fontFamily: 'var(--font-heading)',
+        whiteSpace: 'nowrap',
+      }}>
+        🌿 Mathandel
       </Link>
 
-      {/* Mitten: lägestabbar */}
-      <div style={{ display: 'flex', gap: '4px', flex: 1, justifyContent: 'center' }}>
-        {MODES.map(mode => {
-          const active = isActiveMode(mode)
-          return (
-            <Link
-              key={mode.href}
-              href={mode.href}
+      {/* Höger: hushållsdropdown + inställningar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {householdId ? (
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setDropdownOpen(v => !v)}
               style={{
-                textDecoration: 'none',
-                padding: '6px 12px',
+                background: 'none',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
+                cursor: 'pointer',
+                color: 'var(--text)',
                 fontSize: '13px',
-                fontWeight: active ? '700' : '500',
-                background: active ? 'var(--accent)' : 'transparent',
-                color: active ? 'var(--accent-text)' : 'var(--text-muted)',
-                border: active ? 'none' : '1px solid transparent',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
+                fontWeight: '500',
+                padding: '6px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                maxWidth: '160px',
+                overflow: 'hidden',
               }}
             >
-              {mode.label}
-            </Link>
-          )
-        })}
-      </div>
+              <span>🏠</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{householdName}</span>
+              <span style={{ fontSize: '10px', opacity: 0.6, flexShrink: 0 }}>▾</span>
+            </button>
 
-      {/* Höger: tema + kampanjer + panik + hushåll + inställningar + logga ut */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-        <ThemeToggle />
-        {householdId && (
-          <Link href="/campaigns" title="Kampanjer & erbjudanden" style={{ color: 'var(--text-muted)', fontSize: '17px', padding: '6px', lineHeight: 1, textDecoration: 'none' }}>
-            🏷️
-          </Link>
-        )}
-        {householdId && (
-          <Link href="/panic" title="Vad kan jag laga?" style={{ color: 'var(--text-muted)', fontSize: '17px', padding: '6px', lineHeight: 1, textDecoration: 'none' }}>
-            🆘
-          </Link>
-        )}
-        {householdId && (
-          <Link
-            href={`/household/${householdId}`}
-            title={householdName || 'Mitt hushåll'}
-            style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '6px 8px', lineHeight: 1, textDecoration: 'none', border: '1px solid var(--border)', borderRadius: '8px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            🏠 {householdName || 'Hushåll'}
-          </Link>
-        )}
-        {!householdId && (
+            {dropdownOpen && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                boxShadow: 'var(--shadow-hover)',
+                minWidth: '180px',
+                overflow: 'hidden',
+                zIndex: 200,
+              }}>
+                <Link
+                  href={`/household/${householdId}`}
+                  onClick={() => setDropdownOpen(false)}
+                  style={{
+                    display: 'block',
+                    padding: '12px 16px',
+                    textDecoration: 'none',
+                    color: 'var(--text)',
+                    fontSize: '14px',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  🏠 Mitt hushåll
+                </Link>
+                <Link
+                  href="/household"
+                  onClick={() => setDropdownOpen(false)}
+                  style={{
+                    display: 'block',
+                    padding: '12px 16px',
+                    textDecoration: 'none',
+                    color: 'var(--text)',
+                    fontSize: '14px',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  🔄 Byt hushåll
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--danger)',
+                    fontSize: '14px',
+                    textAlign: 'left',
+                  }}
+                >
+                  Logga ut
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
           <Link href="/household" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '500' }}>
             Skapa hushåll →
           </Link>
         )}
-        <button
-          onClick={handleLogout}
-          title="Logga ut"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: '6px 8px', borderRadius: '6px' }}
+
+        <Link
+          href={householdId ? `/household/${householdId}` : '/household'}
+          title="Inställningar"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
+            border: '1px solid var(--border)',
+            textDecoration: 'none',
+            fontSize: '16px',
+            color: 'var(--text-muted)',
+          }}
         >
-          Logga ut
-        </button>
+          ⚙️
+        </Link>
       </div>
     </nav>
   )

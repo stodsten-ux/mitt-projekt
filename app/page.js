@@ -1,202 +1,274 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
-import HouseholdCard from '../components/HouseholdCard'
 import Spinner from '../components/Spinner'
 
 const supabase = createClient()
 
-const NAV_CARDS = [
-  { emoji: '📅', title: 'Veckomenyn', desc: 'Planera veckans middagar', href: '/menu' },
-  { emoji: '📖', title: 'Recept', desc: 'Bläddra och spara recept', href: '/recipes' },
-  { emoji: '🛍️', title: 'Inköpslista', desc: 'Handla smart och billigt', href: '/shopping' },
-  { emoji: '🥦', title: 'Skafferiet', desc: 'Minska svinn och rester', href: '/pantry' },
-]
-
-export default function Home() {
-  const [user, setUser] = useState(undefined) // undefined = loading, null = utloggad
-  const [household, setHousehold] = useState(null)
+export default function DashboardPage() {
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
   const [householdId, setHouseholdId] = useState(null)
-  const [preferences, setPreferences] = useState(null)
-  const [aiSuggestion, setAiSuggestion] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  const [todayItem, setTodayItem] = useState(null)
+  const [weekItems, setWeekItems] = useState([])
+  const [shoppingList, setShoppingList] = useState(null)
+  const [expiringItems, setExpiringItems] = useState([])
+  const router = useRouter()
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      setUser(user ?? null)
-      if (!user) return
+      if (!user) { router.push('/auth/login'); return }
+      setUser(user)
 
       const { data: members } = await supabase
         .from('household_members')
-        .select('household_id, households(*)')
+        .select('household_id')
         .eq('user_id', user.id)
         .limit(1)
 
-      if (members?.length) {
-        setHouseholdId(members[0].household_id)
-        setHousehold(members[0].households)
-        const { data: prefs } = await supabase
-          .from('household_preferences')
-          .select('*')
-          .eq('household_id', members[0].household_id)
-          .maybeSingle()
-        setPreferences(prefs)
+      if (!members?.length) { router.push('/household'); return }
+      const hid = members[0].household_id
+      setHouseholdId(hid)
+
+      // Veckomenyn
+      const weekStart = getWeekStart()
+      const { data: menu } = await supabase
+        .from('menus')
+        .select('id')
+        .eq('household_id', hid)
+        .gte('week_start', weekStart)
+        .limit(1)
+
+      if (menu?.length) {
+        const { data: items } = await supabase
+          .from('menu_items')
+          .select('recipe_id, custom_title, day_of_week, meal_type, recipes(id, title, description)')
+          .eq('menu_id', menu[0].id)
+          .order('day_of_week')
+        const allItems = items || []
+        setWeekItems(allItems)
+
+        const todayDow = getTodayDayOfWeek()
+        const todayEntry = allItems.find(i => i.day_of_week === todayDow)
+        setTodayItem(todayEntry || null)
       }
+
+      // Senaste inköpslista
+      const { data: lists } = await supabase
+        .from('shopping_lists')
+        .select('id, title')
+        .eq('household_id', hid)
+        .order('id', { ascending: false })
+        .limit(1)
+
+      if (lists?.length) {
+        const { data: sitems } = await supabase
+          .from('shopping_items')
+          .select('id, checked, price')
+          .eq('shopping_list_id', lists[0].id)
+        const total = sitems?.reduce((s, i) => s + (i.price || 0), 0) || 0
+        setShoppingList({ ...lists[0], count: sitems?.length || 0, estimatedCost: Math.round(total) })
+      }
+
+      // Skafferi — utgår snart
+      const soon = new Date()
+      soon.setDate(soon.getDate() + 2)
+      const { data: pantry } = await supabase
+        .from('pantry')
+        .select('name, expires_at')
+        .eq('household_id', hid)
+        .not('expires_at', 'is', null)
+        .lte('expires_at', soon.toISOString().split('T')[0])
+        .order('expires_at')
+        .limit(3)
+      setExpiringItems(pantry || [])
+
+      setLoading(false)
     }
     load()
-  }, [])
+  }, [router])
 
-  async function getAiSuggestion() {
-    setAiLoading(true)
-    setAiSuggestion('')
-    const res = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: 'Föreslå en veckans meny med 5 middagar. Bara namnen på rätterna, en per rad.', householdId }),
-    })
-    const data = await res.json()
-    setAiSuggestion(data.content || '')
-    setAiLoading(false)
-  }
-
-  // Loading
-  if (user === undefined) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-      <Spinner size="lg" />
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh', gap: '12px', color: 'var(--text-muted)' }}>
+      <Spinner />Laddar...
     </div>
   )
 
-  // ── UTLOGGAD — Hero ────────────────────────────────────────────
-  if (!user) {
-    return (
-      <div style={{ paddingTop: 0 }}>
-        {/* Hero */}
-        <div className="hero" style={{ minHeight: '100vh' }}>
-          <div className="hero-bg">
-            <Image
-              src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80"
-              alt="Matlagning"
-              fill
-              priority
-              style={{ objectFit: 'cover', opacity: 0.30 }}
-            />
-          </div>
-          <div className="hero-content animate-fade-in">
-            <p style={{ fontSize: '13px', fontWeight: '600', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.60)', marginBottom: '16px' }}>
-              Din smarta matassistent
-            </p>
-            <h1>Planera, handla och laga — enklare.</h1>
-            <p>
-              AI-drivet stöd för hela matcykeln. Veckomenyer anpassade efter din familj, smarta inköpslistor och steg-för-steg lagaläge.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link href="/auth/register" className="btn-cta" style={{ minWidth: '180px' }}>
-                Kom igång gratis
-              </Link>
-              <Link href="/auth/login" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '14px 28px', background: 'rgba(255,255,255,0.12)', color: '#FFFFFF', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: '12px', textDecoration: 'none', fontSize: '16px', fontWeight: '600', backdropFilter: 'blur(4px)', minWidth: '140px' }}>
-                Logga in
-              </Link>
-            </div>
-          </div>
-        </div>
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'God morgon' : hour < 17 ? 'God eftermiddag' : 'God kväll'
 
-        {/* Features */}
-        <div style={{ background: 'var(--bg)', padding: '80px 24px' }}>
-          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-            <p className="section-label" style={{ textAlign: 'center', marginBottom: '8px' }}>Funktioner</p>
-            <h2 style={{ textAlign: 'center', marginBottom: '48px', fontFamily: 'var(--font-heading)' }}>Allt du behöver för maten</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-              {[
-                { icon: '📅', title: 'Veckomenyn', text: 'Generera hela veckans middagar med ett knapptryck, anpassade efter era allergier och preferenser.' },
-                { icon: '🛍️', title: 'Smart inköpslista', text: 'Inköpslistan skapas automatiskt från menyn. Stäms av mot skafferiet så du inte köper dubbelt.' },
-                { icon: '👨‍🍳', title: 'Lagaläge', text: 'Steg-för-steg vid spisen med inbyggd timer, röststyrning och AI-hjälp om du saknar en ingrediens.' },
-                { icon: '🏷️', title: 'Kampanjer', text: 'Se veckans erbjudanden i dina butiker och köp rätt varor vid rätt tillfälle.' },
-              ].map((f, i) => (
-                <div key={i} className="card" style={{ padding: '28px' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '14px' }}>{f.icon}</div>
-                  <h3 style={{ marginBottom: '8px', fontFamily: 'var(--font-heading)' }}>{f.title}</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.65' }}>{f.text}</p>
-                </div>
-              ))}
-            </div>
-            <div style={{ textAlign: 'center', marginTop: '48px' }}>
-              <Link href="/auth/register" className="btn-cta">
-                Skapa konto gratis →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── INLOGGAD — Dashboard ───────────────────────────────────────
-  const firstName = user.email?.split('@')[0] ?? ''
+  const DAYS = ['', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+  const todayDow = getTodayDayOfWeek()
 
   return (
     <div className="page animate-fade-in">
       {/* Hälsning */}
       <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '4px' }}>
-          Hej{firstName ? ` ${firstName}` : ''}! 👋
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '2px' }}>
+          {greeting} 👋
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>Vad ska det bli för mat?</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+          {getDayName()}, vecka {getWeekNumber()}
+        </p>
       </div>
 
-      {/* Hushållskort eller onboarding */}
-      {household ? (
-        <HouseholdCard household={household} preferences={preferences} householdId={householdId} />
-      ) : (
-        <div className="card" style={{ padding: '28px', marginBottom: '24px', borderLeft: '4px solid var(--color-terracotta)' }}>
-          <h3 style={{ marginBottom: '6px', fontFamily: 'var(--font-heading)' }}>Välkommen till Mathandelsagenten!</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>
-            Skapa ditt hushåll för att komma igång med menyplanering, recept och inköpslistor.
-          </p>
-          <Link href="/household" className="btn-primary">
-            Skapa hushåll →
-          </Link>
-        </div>
-      )}
-
-      {/* Navigationskort */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '28px' }}>
-        {NAV_CARDS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="card"
-            style={{ padding: '22px', textDecoration: 'none', display: 'block' }}
-          >
-            <div style={{ fontSize: '28px', marginBottom: '10px' }}>{item.emoji}</div>
-            <h3 style={{ marginBottom: '4px', fontSize: '15px', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{item.desc}</p>
-          </Link>
-        ))}
-      </div>
-
-      {/* AI-snabbförslag */}
-      <div className="card" style={{ padding: '28px' }}>
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.125rem', marginBottom: '16px' }}>
-          ✨ Snabbförslag på veckans meny
-        </h2>
-        <button
-          onClick={getAiSuggestion}
-          disabled={aiLoading}
-          className="btn-primary"
-          style={{ marginBottom: aiSuggestion ? '18px' : 0 }}
-        >
-          {aiLoading ? <><Spinner />&nbsp;Hämtar förslag...</> : 'Ge mig förslag!'}
-        </button>
-        {aiSuggestion && (
-          <div className="animate-fade-in" style={{ whiteSpace: 'pre-wrap', color: 'var(--text)', lineHeight: '1.75', fontSize: '15px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-            {aiSuggestion}
+      {/* Ikväll lagar vi */}
+      <div style={{ marginBottom: '20px' }}>
+        <p className="section-label">👨‍🍳 Ikväll lagar vi</p>
+        {todayItem ? (
+          <div className="card" style={{ padding: '20px' }}>
+            <p style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-heading)', marginBottom: '4px', color: 'var(--text)' }}>
+              {todayItem.recipes?.title || todayItem.custom_title}
+            </p>
+            {todayItem.recipes?.description && (
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>{todayItem.recipes.description}</p>
+            )}
+            {todayItem.recipes?.id ? (
+              <Link href={`/cook/${todayItem.recipes.id}`} className="btn-primary" style={{ fontSize: '14px', padding: '10px 18px' }}>
+                Börja laga →
+              </Link>
+            ) : (
+              <Link href="/menu" className="btn-secondary" style={{ fontSize: '14px', padding: '10px 18px' }}>
+                Se veckomeny →
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Inget planerat för idag</p>
+            <Link href="/menu" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Välj recept →</Link>
           </div>
         )}
       </div>
+
+      {/* Denna vecka */}
+      <div style={{ marginBottom: '20px' }}>
+        <p className="section-label">📅 Denna vecka</p>
+        <div className="card" style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+            {[1,2,3,4,5,6,7].map(dow => {
+              const item = weekItems.find(i => i.day_of_week === dow)
+              const hasRecipe = item?.recipe_id != null
+              const isToday = dow === todayDow
+              return (
+                <div key={dow} style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  padding: '6px 2px',
+                  borderRadius: '8px',
+                  background: isToday ? 'var(--color-forest)' : 'var(--bg)',
+                  border: '1px solid var(--border)',
+                }}>
+                  <p style={{ fontSize: '10px', fontWeight: '600', color: isToday ? '#fff' : 'var(--text-muted)', marginBottom: '2px' }}>{DAYS[dow]}</p>
+                  <p style={{ fontSize: '14px' }}>{hasRecipe ? '✅' : '➕'}</p>
+                </div>
+              )
+            })}
+          </div>
+          <Link href="/menu" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600' }}>
+            Planera veckan →
+          </Link>
+        </div>
+      </div>
+
+      {/* Inköpslista */}
+      <div style={{ marginBottom: '20px' }}>
+        <p className="section-label">🛍️ Inköpslista</p>
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {shoppingList ? (
+            <>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{shoppingList.count} varor</p>
+                {shoppingList.estimatedCost > 0 && (
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Est. {shoppingList.estimatedCost} kr</p>
+                )}
+              </div>
+              <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Öppna listan →</Link>
+            </>
+          ) : (
+            <>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ingen aktiv inköpslista</p>
+              <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Skapa lista →</Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Skafferiet — utgår snart */}
+      {expiringItems.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <p className="section-label">⚠️ Skafferiet</p>
+          <div className="card" style={{ padding: '16px 20px' }}>
+            {expiringItems.map((item, i) => (
+              <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: i < expiringItems.length - 1 ? '4px' : '12px' }}>
+                {item.name} — {formatExpiry(item.expires_at)}
+              </p>
+            ))}
+            <Link href="/pantry" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600' }}>
+              Se skafferiet →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Panikknapp */}
+      <div style={{ marginBottom: '20px' }}>
+        <p className="section-label">🆘 Panikknapp</p>
+        <Link href="/panic" className="card" style={{
+          padding: '16px 20px',
+          textDecoration: 'none',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div>
+            <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>Vad kan jag laga just nu?</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Baserat på vad du har hemma</p>
+          </div>
+          <span style={{ fontSize: '20px' }}>→</span>
+        </Link>
+      </div>
     </div>
   )
+}
+
+function getWeekStart() {
+  const d = new Date()
+  const day = d.getDay() || 7
+  d.setDate(d.getDate() - day + 1)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString().split('T')[0]
+}
+
+function getTodayDayOfWeek() {
+  const d = new Date().getDay()
+  return d === 0 ? 7 : d
+}
+
+function getDayName() {
+  const days = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag']
+  return days[new Date().getDay()]
+}
+
+function getWeekNumber() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+  const week1 = new Date(d.getFullYear(), 0, 4)
+  return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
+}
+
+function formatExpiry(dateStr) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const exp = new Date(dateStr)
+  const diff = Math.round((exp - today) / 86400000)
+  if (diff < 0) return 'utgånget'
+  if (diff === 0) return 'går ut idag'
+  if (diff === 1) return 'går ut imorgon'
+  return `går ut om ${diff} dagar`
 }

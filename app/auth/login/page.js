@@ -24,7 +24,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)', marginTop: '-104px' }}>
       <div className="form-card animate-fade-in">
         <p style={{ textAlign: 'center', fontSize: '32px', marginBottom: '8px' }}>🛒</p>
         <h1 style={{ fontFamily: 'var(--font-heading)', textAlign: 'center', marginBottom: '4px' }}>Välkommen tillbaka</h1>

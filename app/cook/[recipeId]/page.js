@@ -304,7 +304,7 @@ export default function CookPage() {
   const stepProgress = steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '24px 20px 40px', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ maxWidth: '600px', margin: '-48px auto 0', padding: '24px 20px 40px', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
