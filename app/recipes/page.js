@@ -5,6 +5,8 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { getFallbackImage } from '../../lib/unsplash'
+import { Search, Sparkles, BookOpen } from 'lucide-react'
 
 const supabase = createClient()
 
@@ -110,12 +112,12 @@ export default function RecipesPage() {
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '28px', color: 'var(--text)' }}>📖 Recept</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '28px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'var(--font-heading)' }}><BookOpen size={24} /> Recept</h1>
 
       {/* Flikar */}
       {view === 'list' && (
         <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
-          {[{ key: 'mine', label: '🍽️ Mina recept' }, { key: 'discover', label: '🌍 Upptäck' }].map(t => (
+          {[{ key: 'mine', label: 'Mina recept' }, { key: 'discover', label: 'Upptäck' }].map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: activeTab === t.key ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', fontWeight: activeTab === t.key ? '600' : '400', fontSize: '14px', color: activeTab === t.key ? 'var(--text)' : 'var(--text-muted)' }}>
               {t.label}
             </button>
@@ -128,7 +130,7 @@ export default function RecipesPage() {
         <>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <button onClick={() => setView('create')} style={{ flex: 1, padding: '12px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>+ Skapa recept</button>
-            <button onClick={() => setView('ai')} style={{ flex: 1, padding: '12px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>✨ Generera med AI</button>
+            <button onClick={() => setView('ai')} style={{ flex: 1, padding: '12px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Sparkles size={14} /> Generera med AI</button>
           </div>
           {/* Sök */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
@@ -141,7 +143,7 @@ export default function RecipesPage() {
               style={inputStyle}
             />
             <button onClick={handleSearch} disabled={searchLoading || !searchQuery.trim()} style={{ padding: '10px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', color: 'var(--text)', whiteSpace: 'nowrap' }}>
-              {searchLoading ? <Spinner /> : '🔍'}
+              {searchLoading ? <Spinner /> : <Search size={16} />}
             </button>
           </div>
           {/* Sökresultat */}
@@ -150,7 +152,7 @@ export default function RecipesPage() {
               {searchResults.length === 0 ? (
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '12px' }}>Inga recept hittades för "{searchQuery}"</p>
-                  <button onClick={() => { setAiPrompt(searchQuery); setView('ai') }} style={{ padding: '10px 18px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>✨ Generera med AI</button>
+                  <button onClick={() => { setAiPrompt(searchQuery); setView('ai') }} style={{ padding: '10px 18px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Sparkles size={14} /> Generera med AI</button>
                 </div>
               ) : (
                 <div>
@@ -172,22 +174,21 @@ export default function RecipesPage() {
           )}
           {recipes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <p style={{ fontSize: '32px', marginBottom: '12px' }}>🍳</p>
+              <BookOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
               <p>Inga recept ännu. Skapa ditt första!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
               {recipes.map(r => (
-                <Link key={r.id} href={`/recipes/${r.id}`} style={{ display: 'block', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', textDecoration: 'none', color: 'var(--text)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h3 style={{ marginBottom: '3px', fontSize: '15px', fontWeight: '600' }}>{r.title}</h3>
-                      {r.description && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{r.description}</p>}
+                <Link key={r.id} href={`/recipes/${r.id}`} className="card" style={{ textDecoration: 'none', display: 'block', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', aspectRatio: '16/9', backgroundImage: `url(${getFallbackImage(r.title)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                  <div style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <h3 style={{ fontSize: '14px', fontFamily: 'var(--font-heading)', color: 'var(--text)', flex: 1, marginRight: '8px', lineHeight: '1.3' }}>{r.title}</h3>
+                      {r.ai_generated && <span className="tag" style={{ fontSize: '10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '3px' }}><Sparkles size={9} /> AI</span>}
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0, marginLeft: '12px' }}>
-                      {r.ai_generated && <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 6px' }}>AI</span>}
-                      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{r.servings} port.</span>
-                    </div>
+                    {r.description && <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.4' }}>{r.description}</p>}
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{r.servings} portioner</p>
                   </div>
                 </Link>
               ))}
@@ -201,7 +202,7 @@ export default function RecipesPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {sharedRecipes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <p style={{ fontSize: '32px', marginBottom: '12px' }}>🌍</p>
+              <BookOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
               <p>Inga delade recept ännu.</p>
             </div>
           ) : sharedRecipes.map(r => {
@@ -256,7 +257,7 @@ export default function RecipesPage() {
       {view === 'ai' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text)' }}>✨ Generera recept med AI</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles size={18} /> Generera recept med AI</h2>
             <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px' }}>Avbryt</button>
           </div>
           <div style={{ marginBottom: '20px' }}>

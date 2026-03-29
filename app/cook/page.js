@@ -5,11 +5,12 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { getFallbackImage } from '../../lib/unsplash'
+import { ChefHat, ChevronRight, Sparkles, BookOpen } from 'lucide-react'
 
 const supabase = createClient()
 
 export default function CookIndexPage() {
-  const [householdId, setHouseholdId] = useState(null)
   const [recipes, setRecipes] = useState([])
   const [menuRecipes, setMenuRecipes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -27,9 +28,7 @@ export default function CookIndexPage() {
         .limit(1)
       if (!members?.length) { router.push('/household'); return }
       const hid = members[0].household_id
-      setHouseholdId(hid)
 
-      // Hämta veckomenyn — recept för denna vecka
       const weekStart = getWeekStart()
       const { data: menu } = await supabase
         .from('menus')
@@ -41,14 +40,13 @@ export default function CookIndexPage() {
       if (menu?.length) {
         const { data: items } = await supabase
           .from('menu_items')
-          .select('recipe_id, custom_title, day_of_week, meal_type, recipes(id, title, description)')
+          .select('recipe_id, custom_title, day_of_week, recipes(id, title, description)')
           .eq('menu_id', menu[0].id)
           .not('recipe_id', 'is', null)
           .order('day_of_week')
         setMenuRecipes(items || [])
       }
 
-      // Hämta senaste recept
       const { data: recent } = await supabase
         .from('recipes')
         .select('id, title, description, ai_generated')
@@ -71,8 +69,12 @@ export default function CookIndexPage() {
 
   return (
     <div className="page animate-fade-in">
-      <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '6px' }}>👨‍🍳 Laga</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '32px' }}>Välj vad du ska laga och starta steg-för-steg-läget.</p>
+      <div style={{ marginBottom: '28px' }}>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <ChefHat size={26} /> Laga
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>Välj vad du ska laga och starta steg-för-steg-läget.</p>
+      </div>
 
       {/* Veckomenyn */}
       {menuRecipes.length > 0 && (
@@ -87,14 +89,26 @@ export default function CookIndexPage() {
                   key={i}
                   href={`/cook/${recipe.id}`}
                   className="card"
-                  style={{ padding: '16px 20px', textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  style={{ textDecoration: 'none', display: 'flex', overflow: 'hidden' }}
                 >
-                  <div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '2px' }}>{DAYS[item.day_of_week] || ''}</p>
-                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>{recipe.title}</p>
+                  {/* Miniatyrbild */}
+                  <div style={{
+                    width: '80px',
+                    flexShrink: 0,
+                    backgroundImage: `url(${getFallbackImage(recipe.title)})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }} />
+                  <div style={{ padding: '14px 16px', flex: 1 }}>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      {DAYS[item.day_of_week] || ''}
+                    </p>
+                    <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>{recipe.title}</p>
                     {recipe.description && <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{recipe.description}</p>}
                   </div>
-                  <span style={{ fontSize: '20px', marginLeft: '12px', flexShrink: 0 }}>→</span>
+                  <div style={{ display: 'flex', alignItems: 'center', paddingRight: '16px' }}>
+                    <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
+                  </div>
                 </Link>
               )
             })}
@@ -102,24 +116,40 @@ export default function CookIndexPage() {
         </div>
       )}
 
-      {/* Alla recept */}
+      {/* Alla recept — Spotify-inspirerade kort med bild */}
       {recipes.length > 0 && (
         <div style={{ marginBottom: '36px' }}>
           <p className="section-label">Dina recept</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
             {recipes.map(recipe => (
               <Link
                 key={recipe.id}
                 href={`/cook/${recipe.id}`}
                 className="card"
-                style={{ padding: '20px', textDecoration: 'none', display: 'block' }}
+                style={{ textDecoration: 'none', display: 'block', overflow: 'hidden' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                  <h3 style={{ fontSize: '15px', fontFamily: 'var(--font-heading)', color: 'var(--text)', flex: 1, marginRight: '8px' }}>{recipe.title}</h3>
-                  {recipe.ai_generated && <span className="tag" style={{ fontSize: '11px', flexShrink: 0 }}>✨ AI</span>}
+                {/* Bild 16:9 */}
+                <div style={{
+                  width: '100%',
+                  aspectRatio: '16/9',
+                  backgroundImage: `url(${getFallbackImage(recipe.title)})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }} />
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                    <h3 style={{ fontSize: '14px', fontFamily: 'var(--font-heading)', color: 'var(--text)', flex: 1, marginRight: '8px', lineHeight: '1.3' }}>{recipe.title}</h3>
+                    {recipe.ai_generated && (
+                      <span className="tag" style={{ fontSize: '11px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Sparkles size={10} /> AI
+                      </span>
+                    )}
+                  </div>
+                  {recipe.description && <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.4' }}>{recipe.description}</p>}
+                  <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <ChefHat size={12} /> Börja laga
+                  </p>
                 </div>
-                {recipe.description && <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5' }}>{recipe.description}</p>}
-                <p style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '600', marginTop: '12px' }}>👨‍🍳 Börja laga →</p>
               </Link>
             ))}
           </div>
@@ -128,7 +158,7 @@ export default function CookIndexPage() {
 
       {recipes.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-          <p style={{ fontSize: '40px', marginBottom: '12px' }}>📖</p>
+          <BookOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
           <p style={{ marginBottom: '20px' }}>Inga recept än. Gå till receptbiblioteket och spara eller generera dina första recept.</p>
           <Link href="/recipes" className="btn-primary">Gå till recept →</Link>
         </div>

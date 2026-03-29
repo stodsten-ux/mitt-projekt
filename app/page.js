@@ -5,6 +5,8 @@ import { createClient } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../components/Spinner'
+import { getFallbackImage } from '../lib/unsplash'
+import { ChefHat, CalendarDays, ShoppingBag, AlertCircle, ChevronRight } from 'lucide-react'
 
 const supabase = createClient()
 
@@ -34,7 +36,6 @@ export default function DashboardPage() {
       const hid = members[0].household_id
       setHouseholdId(hid)
 
-      // Veckomenyn
       const weekStart = getWeekStart()
       const { data: menu } = await supabase
         .from('menus')
@@ -46,18 +47,15 @@ export default function DashboardPage() {
       if (menu?.length) {
         const { data: items } = await supabase
           .from('menu_items')
-          .select('recipe_id, custom_title, day_of_week, meal_type, recipes(id, title, description)')
+          .select('recipe_id, custom_title, day_of_week, recipes(id, title, description)')
           .eq('menu_id', menu[0].id)
           .order('day_of_week')
         const allItems = items || []
         setWeekItems(allItems)
-
         const todayDow = getTodayDayOfWeek()
-        const todayEntry = allItems.find(i => i.day_of_week === todayDow)
-        setTodayItem(todayEntry || null)
+        setTodayItem(allItems.find(i => i.day_of_week === todayDow) || null)
       }
 
-      // Senaste inköpslista
       const { data: lists } = await supabase
         .from('shopping_lists')
         .select('id, title')
@@ -74,7 +72,6 @@ export default function DashboardPage() {
         setShoppingList({ ...lists[0], count: sitems?.length || 0, estimatedCost: Math.round(total) })
       }
 
-      // Skafferi — utgår snart
       const soon = new Date()
       soon.setDate(soon.getDate() + 2)
       const { data: pantry } = await supabase
@@ -99,55 +96,66 @@ export default function DashboardPage() {
   )
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'God morgon' : hour < 17 ? 'God eftermiddag' : 'God kväll'
+  const { greeting, heroGradient } = getGreeting(hour)
 
   const DAYS = ['', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
   const todayDow = getTodayDayOfWeek()
 
+  const todayTitle = todayItem?.recipes?.title || todayItem?.custom_title
+  const heroImage = todayTitle ? getFallbackImage(todayTitle) : getFallbackImage('mat')
+
   return (
     <div className="page animate-fade-in">
-      {/* Hälsning */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '2px' }}>
+
+      {/* ── Hero-sektion ── */}
+      <div style={{
+        background: `linear-gradient(rgba(0,0,0,0.42), rgba(0,0,0,0.62)), url(${heroImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        borderRadius: '20px',
+        padding: '32px 28px',
+        color: '#fff',
+        marginBottom: '24px',
+      }}>
+        <p style={{ fontSize: '13px', opacity: 0.75, marginBottom: '4px' }}>
+          {getDayName()} · vecka {getWeekNumber()}
+        </p>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.9rem', fontWeight: '700', marginBottom: '20px', lineHeight: 1.2 }}>
           {greeting} 👋
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-          {getDayName()}, vecka {getWeekNumber()}
-        </p>
-      </div>
 
-      {/* Ikväll lagar vi */}
-      <div style={{ marginBottom: '20px' }}>
-        <p className="section-label">👨‍🍳 Ikväll lagar vi</p>
-        {todayItem ? (
-          <div className="card" style={{ padding: '20px' }}>
-            <p style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-heading)', marginBottom: '4px', color: 'var(--text)' }}>
-              {todayItem.recipes?.title || todayItem.custom_title}
+        {todayTitle ? (
+          <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)', borderRadius: '14px', padding: '16px 18px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginBottom: '4px' }}>
+              Ikväll lagar vi
             </p>
-            {todayItem.recipes?.description && (
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>{todayItem.recipes.description}</p>
-            )}
-            {todayItem.recipes?.id ? (
-              <Link href={`/cook/${todayItem.recipes.id}`} className="btn-primary" style={{ fontSize: '14px', padding: '10px 18px' }}>
-                Börja laga →
+            <p style={{ fontSize: '18px', fontWeight: '700', fontFamily: 'var(--font-heading)', marginBottom: '12px' }}>{todayTitle}</p>
+            {todayItem?.recipes?.id ? (
+              <Link
+                href={`/cook/${todayItem.recipes.id}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff', color: 'var(--color-forest)', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
+              >
+                <ChefHat size={14} /> Börja laga
               </Link>
             ) : (
-              <Link href="/menu" className="btn-secondary" style={{ fontSize: '14px', padding: '10px 18px' }}>
-                Se veckomeny →
+              <Link href="/menu" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}>
+                Se meny <ChevronRight size={14} />
               </Link>
             )}
           </div>
         ) : (
-          <div className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Inget planerat för idag</p>
-            <Link href="/menu" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Välj recept →</Link>
+          <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)', borderRadius: '14px', padding: '16px 18px' }}>
+            <p style={{ fontSize: '14px', opacity: 0.85, marginBottom: '10px' }}>Inget planerat för idag</p>
+            <Link href="/menu" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}>
+              <CalendarDays size={14} /> Planera veckan
+            </Link>
           </div>
         )}
       </div>
 
-      {/* Denna vecka */}
+      {/* ── Denna vecka ── */}
       <div style={{ marginBottom: '20px' }}>
-        <p className="section-label">📅 Denna vecka</p>
+        <p className="section-label">Denna vecka</p>
         <div className="card" style={{ padding: '16px 20px' }}>
           <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
             {[1,2,3,4,5,6,7].map(dow => {
@@ -158,54 +166,53 @@ export default function DashboardPage() {
                 <div key={dow} style={{
                   flex: 1,
                   textAlign: 'center',
-                  padding: '6px 2px',
+                  padding: '7px 2px',
                   borderRadius: '8px',
                   background: isToday ? 'var(--color-forest)' : 'var(--bg)',
                   border: '1px solid var(--border)',
                 }}>
-                  <p style={{ fontSize: '10px', fontWeight: '600', color: isToday ? '#fff' : 'var(--text-muted)', marginBottom: '2px' }}>{DAYS[dow]}</p>
-                  <p style={{ fontSize: '14px' }}>{hasRecipe ? '✅' : '➕'}</p>
+                  <p style={{ fontSize: '10px', fontWeight: '600', color: isToday ? '#fff' : 'var(--text-muted)', marginBottom: '3px' }}>{DAYS[dow]}</p>
+                  <p style={{ fontSize: '13px' }}>{hasRecipe ? '✅' : '➕'}</p>
                 </div>
               )
             })}
           </div>
-          <Link href="/menu" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600' }}>
-            Planera veckan →
+          <Link href="/menu" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <CalendarDays size={13} /> Planera veckan
           </Link>
         </div>
       </div>
 
-      {/* Inköpslista */}
+      {/* ── Inköpslista ── */}
       <div style={{ marginBottom: '20px' }}>
-        <p className="section-label">🛍️ Inköpslista</p>
+        <p className="section-label">Inköpslista</p>
         <div className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {shoppingList ? (
-            <>
-              <div>
+          <div>
+            {shoppingList ? (
+              <>
                 <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{shoppingList.count} varor</p>
                 {shoppingList.estimatedCost > 0 && (
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Est. {shoppingList.estimatedCost} kr</p>
                 )}
-              </div>
-              <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Öppna listan →</Link>
-            </>
-          ) : (
-            <>
+              </>
+            ) : (
               <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ingen aktiv inköpslista</p>
-              <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px' }}>Skapa lista →</Link>
-            </>
-          )}
+            )}
+          </div>
+          <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <ShoppingBag size={13} /> {shoppingList ? 'Öppna' : 'Skapa'}
+          </Link>
         </div>
       </div>
 
-      {/* Skafferiet — utgår snart */}
+      {/* ── Skafferiet ── */}
       {expiringItems.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
-          <p className="section-label">⚠️ Skafferiet</p>
+          <p className="section-label">Skafferiet</p>
           <div className="card" style={{ padding: '16px 20px' }}>
             {expiringItems.map((item, i) => (
               <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: i < expiringItems.length - 1 ? '4px' : '12px' }}>
-                {item.name} — {formatExpiry(item.expires_at)}
+                ⚠️ {item.name} — {formatExpiry(item.expires_at)}
               </p>
             ))}
             <Link href="/pantry" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600' }}>
@@ -215,9 +222,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Panikknapp */}
+      {/* ── Panikknapp ── */}
       <div style={{ marginBottom: '20px' }}>
-        <p className="section-label">🆘 Panikknapp</p>
         <Link href="/panic" className="card" style={{
           padding: '16px 20px',
           textDecoration: 'none',
@@ -226,14 +232,25 @@ export default function DashboardPage() {
           alignItems: 'center',
         }}>
           <div>
-            <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>Vad kan jag laga just nu?</p>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Baserat på vad du har hemma</p>
+            <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <AlertCircle size={16} style={{ color: 'var(--danger)' }} /> Vad kan jag laga just nu?
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Baserat på vad du har hemma</p>
           </div>
-          <span style={{ fontSize: '20px' }}>→</span>
+          <ChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         </Link>
       </div>
     </div>
   )
+}
+
+function getGreeting(hour) {
+  if (hour < 5)  return { greeting: 'God natt',        heroGradient: 'from-slate-900 to-slate-700' }
+  if (hour < 10) return { greeting: 'God morgon',      heroGradient: 'from-amber-400 to-orange-500' }
+  if (hour < 12) return { greeting: 'God förmiddag',   heroGradient: 'from-yellow-400 to-amber-500' }
+  if (hour < 17) return { greeting: 'God eftermiddag', heroGradient: 'from-green-700 to-emerald-600' }
+  if (hour < 21) return { greeting: 'God kväll',       heroGradient: 'from-orange-500 to-red-600' }
+  return           { greeting: 'God kväll',             heroGradient: 'from-indigo-800 to-purple-900' }
 }
 
 function getWeekStart() {
