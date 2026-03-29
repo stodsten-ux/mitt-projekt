@@ -13,36 +13,27 @@ export default function RegisterPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const router = useRouter()
 
   async function handleRegister(e) {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    if (password.length < 6) {
-      setError('Lösenordet måste vara minst 6 tecken.')
-      setLoading(false)
-      return
-    }
+    if (password.length < 6) { setError('Lösenordet måste vara minst 6 tecken.'); setLoading(false); return }
     const { error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      setSuccess(true)
-    }
+    if (error) { setError(error.message); setLoading(false) }
+    else setSuccess(true)
   }
 
   if (success) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)' }}>
-        <div style={{ width: '100%', maxWidth: '440px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
+        <div className="form-card animate-fade-in" style={{ textAlign: 'center' }}>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>📧</p>
-          <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--text)' }}>Kolla din e-post!</h1>
-          <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
-            Vi har skickat en bekräftelse till <strong style={{ color: 'var(--text)' }}>{email}</strong>. Klicka på länken för att aktivera ditt konto.
+          <h1 style={{ fontFamily: 'var(--font-heading)', marginBottom: '12px' }}>Kolla din e-post!</h1>
+          <p style={{ color: 'var(--text-muted)', lineHeight: '1.65', marginBottom: '28px' }}>
+            Vi har skickat en bekräftelse till <strong style={{ color: 'var(--text)' }}>{email}</strong>.<br />Klicka på länken för att aktivera ditt konto.
           </p>
-          <Link href="/auth/login" style={{ display: 'inline-block', padding: '12px 24px', background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: '10px', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
+          <Link href="/auth/login" className="btn-primary" style={{ width: '100%', padding: '14px' }}>
             Gå till inloggning
           </Link>
         </div>
@@ -52,59 +43,35 @@ export default function RegisterPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg)' }}>
-      <div style={{ width: '100%', maxWidth: '440px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '40px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', marginBottom: '8px', color: 'var(--text)' }}>Skapa konto</h1>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>Mathandelsagenten</p>
+      <div className="form-card animate-fade-in">
+        <p style={{ textAlign: 'center', fontSize: '32px', marginBottom: '8px' }}>🌿</p>
+        <h1 style={{ fontFamily: 'var(--font-heading)', textAlign: 'center', marginBottom: '4px' }}>Skapa konto</h1>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>Kom igång med Mathandelsagenten</p>
 
         <form onSubmit={handleRegister}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>E-post</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              placeholder="din@epost.se"
-              style={{ display: 'block', width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '15px', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
-              onFocus={e => e.target.style.outline = '2px solid var(--accent)'}
-              onBlur={e => e.target.style.outline = 'none'}
-            />
+          <div className="form-group">
+            <label>E-post</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" placeholder="din@epost.se" className="input" />
           </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Lösenord</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              placeholder="Minst 6 tecken"
-              style={{ display: 'block', width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '15px', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
-              onFocus={e => e.target.style.outline = '2px solid var(--accent)'}
-              onBlur={e => e.target.style.outline = 'none'}
-            />
+          <div className="form-group">
+            <label>Lösenord</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" placeholder="Minst 6 tecken" className="input" />
           </div>
 
           {error && (
-            <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,59,48,0.08)', borderRadius: '8px' }}>
+            <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px', padding: '10px 12px', background: 'rgba(217,79,59,0.08)', borderRadius: '8px', border: '1px solid rgba(217,79,59,0.2)' }}>
               {error}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600', marginTop: '8px' }}
-          >
-            {loading ? 'Skapar konto...' : 'Skapa konto'}
+          <button type="submit" disabled={loading} className="btn-cta" style={{ width: '100%', marginTop: '8px', padding: '14px' }}>
+            {loading ? 'Skapar konto...' : 'Skapa konto gratis'}
           </button>
         </form>
 
         <p style={{ marginTop: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
           Har du redan ett konto?{' '}
-          <Link href="/auth/login" style={{ color: 'var(--text)', fontWeight: '500' }}>Logga in</Link>
+          <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: '600', textDecoration: 'none' }}>Logga in</Link>
         </p>
       </div>
     </div>

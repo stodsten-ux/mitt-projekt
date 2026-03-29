@@ -71,7 +71,7 @@ export default function Navbar() {
       gap: '12px',
     }}>
       {/* Vänster: appnamn */}
-      <Link href="/" style={{ textDecoration: 'none', color: 'var(--text)', fontWeight: '700', fontSize: '15px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <Link href="/" style={{ textDecoration: 'none', color: 'var(--accent)', fontWeight: '700', fontSize: '15px', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-heading)' }}>
         🛒 Mathandel
       </Link>
 
