@@ -42,9 +42,8 @@ export default function CookIndexPage() {
           .from('menu_items')
           .select('recipe_id, custom_title, day_of_week, recipes(id, title, description)')
           .eq('menu_id', menu[0].id)
-          .not('recipe_id', 'is', null)
           .order('day_of_week')
-        setMenuRecipes(items || [])
+        setMenuRecipes((items || []).filter(i => i.recipe_id && i.recipes))
       }
 
       const { data: recent } = await supabase

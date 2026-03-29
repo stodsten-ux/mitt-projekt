@@ -95,6 +95,7 @@ export default function MenuPage() {
     const rows = Object.entries(items).filter(([, title]) => title?.trim()).map(([day, title]) => ({ menu_id: mid, day_of_week: parseInt(day), meal_type: 'dinner', custom_title: title.trim() }))
     if (rows.length > 0) await supabase.from('menu_items').insert(rows)
     setSaving(false)
+    return mid
   }
 
   async function getAiSuggestion() {
@@ -119,24 +120,25 @@ export default function MenuPage() {
         if (dayNum) newItems[dayNum] = val
       }
       setMenuItems(newItems)
-      await saveMenu(newItems)
-      // Expandera direkt efter sparning för att skapa recept med recipe_id
+      // saveMenu returnerar det faktiska menu-ID:t — undviker stale state-closure
+      const savedMenuId = await saveMenu(newItems)
       setAiLoading(false)
-      await expandMenu()
+      await expandMenu(savedMenuId)
     } catch {
       alert('Kunde inte tolka AI-svaret. Försök igen.')
       setAiLoading(false)
     }
   }
 
-  async function expandMenu() {
-    if (!menuId) return
+  async function expandMenu(mid) {
+    const activeMenuId = mid || menuId
+    if (!activeMenuId) return
     setExpandLoading(true)
     setExpandStatus('Genererar recept med ingredienser...')
     const response = await fetch('/api/menu/expand', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ menuId, householdId }),
+      body: JSON.stringify({ menuId: activeMenuId, householdId }),
     })
     const data = await response.json()
     if (data.success) {

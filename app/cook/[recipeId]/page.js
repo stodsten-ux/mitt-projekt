@@ -38,6 +38,39 @@ export default function CookPage() {
   const router = useRouter()
   const { recipeId } = useParams()
 
+  // Konverterar instructions-text till strukturerade steg via AI.
+  // Sparar resultatet i recipes.steps så det bara genereras en gång.
+  async function generateSteps(instructions, title, hid, rid) {
+    if (!instructions) return []
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `Dela upp dessa matlagningsinstruktioner för "${title}" i tydliga, korta steg (max 2 meningar per steg). Om ett steg har väntetid (t.ex. "koka i 10 minuter") — sätt timer_seconds till antalet sekunder, annars null. Returnera ENDAST en JSON-array utan markdown:\n[{"text": "Hacka löken fint.", "timer_seconds": null}, {"text": "Koka i 10 minuter.", "timer_seconds": 600}]\n\nInstruktioner:\n${instructions}`,
+          householdId: hid,
+        }),
+      })
+      const data = await res.json()
+      const raw = (data.content || '').trim()
+      const start = raw.indexOf('[')
+      if (start === -1) return []
+      let depth = 0, end = -1
+      for (let i = start; i < raw.length; i++) {
+        if (raw[i] === '[') depth++
+        else if (raw[i] === ']') { depth--; if (depth === 0) { end = i; break } }
+      }
+      if (end === -1) return []
+      const parsed = JSON.parse(raw.slice(start, end + 1))
+      if (!Array.isArray(parsed) || parsed.length === 0) return []
+      // Spara till DB — nästa gång sidan öppnas hämtas stegen direkt
+      await supabase.from('recipes').update({ steps: parsed }).eq('id', rid)
+      return parsed
+    } catch {
+      return []
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -51,18 +84,14 @@ export default function CookPage() {
       if (!r) { router.push('/recipes'); return }
       setRecipe(r)
       setServings(r.servings || 4)
-      // Ladda/parsea steg
       setLoadingSteps(true)
       if (Array.isArray(r.steps) && r.steps.length > 0) {
+        // Steg finns redan i DB — använd dem direkt
         setSteps(r.steps)
-      } else {
-        const res = await fetch('/api/cook/steps', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recipeId, householdId: hid }),
-        })
-        const data = await res.json()
-        if (data.steps) setSteps(data.steps)
+      } else if (r.instructions) {
+        // Konvertera instructions → steps via AI och spara till DB
+        const generated = await generateSteps(r.instructions, r.title, hid, recipeId)
+        if (generated.length > 0) setSteps(generated)
       }
       setLoadingSteps(false)
       setLoading(false)

@@ -63,9 +63,22 @@ Inkludera alla ingredienser som behövs. Returnera BARA JSON-arrayen.`,
   return JSON.parse(raw.slice(start, end + 1))
 }
 
+// Varor som alltid antas finnas hemma — ska aldrig läggas till automatiskt
+const SKIP_ITEMS = ['vatten', 'salt', 'peppar', 'olja', 'olivolja', 'rapsolja', 'smörolja']
+
+// Adjektiv som strippas vid aggregering (men originalnamnet behålls i visningen)
+const STRIP_ADJECTIVES = ['gul', 'röd', 'grön', 'vit', 'färsk', 'fryst', 'ekologisk', 'eko', 'liten', 'stor', 'hackad', 'riven', 'krossad', 'torkad', 'kokt']
+
+function normalizeForMerge(name) {
+  const lower = name.toLowerCase().trim()
+  const tokens = lower.split(/\s+/)
+  const stripped = tokens.filter(t => !STRIP_ADJECTIVES.includes(t))
+  return (stripped.length > 0 ? stripped : tokens).join(' ')
+}
+
 export async function POST(request) {
   try {
-    const { menuId, householdId } = await request.json()
+    const { menuId, householdId, weekStart } = await request.json()
     if (!menuId || !householdId) return Response.json({ error: 'menuId och householdId krävs' }, { status: 400 })
 
     const cookieStore = await cookies()
@@ -78,11 +91,22 @@ export async function POST(request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ error: 'Ej inloggad' }, { status: 401 })
 
-    // 1. Hämta alla menu_items för menyn
+    // 1. Hämta alla menu_items — om weekStart skickas, verifiera att menyn tillhör rätt vecka
+    let resolvedMenuId = menuId
+    if (weekStart) {
+      const { data: menu } = await supabase
+        .from('menus')
+        .select('id')
+        .eq('household_id', householdId)
+        .eq('week_start', weekStart)
+        .single()
+      if (menu) resolvedMenuId = menu.id
+    }
+
     const { data: menuItems } = await supabase
       .from('menu_items')
       .select('recipe_id, custom_title')
-      .eq('menu_id', menuId)
+      .eq('menu_id', resolvedMenuId)
 
     if (!menuItems || menuItems.length === 0) {
       return Response.json({ error: 'Menyn har inga rätter' }, { status: 400 })
@@ -138,28 +162,34 @@ export async function POST(request) {
       return Response.json({ error: 'Kunde inte hämta ingredienser för menyn' }, { status: 400 })
     }
 
-    // 5. Slå ihop dubletter
+    // 5. Filtrera bort basvaror som alltid antas finnas hemma
+    const filteredIngredients = allIngredients.filter(ing => {
+      const name = (typeof ing === 'string' ? ing : ing.name || '').toLowerCase()
+      return !SKIP_ITEMS.some(skip => name.includes(skip))
+    })
+
+    // 6. Slå ihop dubletter med normaliserat namn som nyckel
+    // Originalnamnet (första förekomsten) behålls i visningen
     const merged = {}
-    for (const ing of allIngredients) {
+    for (const ing of filteredIngredients) {
       const name = typeof ing === 'string' ? ing : ing.name
       if (!name) continue
       const quantity = typeof ing === 'object' ? (ing.quantity || ing.amount) : null
       const unit = typeof ing === 'object' ? ing.unit : null
-      const key = name.toLowerCase().trim()
+      // Normalisera för att slå ihop "Gul lök" + "Röd lök" + "Lök" → nyckel "lök"
+      const key = normalizeForMerge(name) + '|' + (unit || '').toLowerCase()
       if (!merged[key]) {
         merged[key] = { name, quantity: quantity ? String(quantity) : '', unit: unit || '' }
-      }
-      // Om samma vara dyker upp igen — summera numeriska mängder
-      else if (quantity) {
+      } else if (quantity) {
         const existing = parseFloat(merged[key].quantity)
         const incoming = parseFloat(String(quantity))
-        if (!isNaN(existing) && !isNaN(incoming) && merged[key].unit === (unit || '')) {
+        if (!isNaN(existing) && !isNaN(incoming)) {
           merged[key].quantity = String(Math.round((existing + incoming) * 10) / 10)
         }
       }
     }
 
-    // 6. Hämta skafferiet och subtrahera
+    // 7. Hämta skafferiet och subtrahera
     const { data: pantryItems } = await supabase
       .from('pantry')
       .select('name')
@@ -174,17 +204,17 @@ export async function POST(request) {
       return !inPantry
     })
 
-    // 7. Skapa shopping_list
+    // 8. Skapa shopping_list
     const dateStr = new Date().toLocaleDateString('sv-SE')
     const { data: list, error: listError } = await supabase
       .from('shopping_lists')
-      .insert({ household_id: householdId, menu_id: menuId, title: `Inköpslista ${dateStr}`, created_by: user.id })
+      .insert({ household_id: householdId, menu_id: resolvedMenuId, title: `Inköpslista ${dateStr}`, created_by: user.id })
       .select('id')
       .single()
 
     if (listError || !list) return Response.json({ error: 'Kunde inte skapa inköpslista' }, { status: 500 })
 
-    // 8. Skapa shopping_items kategoriserade
+    // 9. Skapa shopping_items kategoriserade
     const rows = shoppingIngredients.map(ing => ({
       shopping_list_id: list.id,
       name: ing.name,
