@@ -130,18 +130,28 @@ export default function DashboardPage() {
               Ikväll lagar vi
             </p>
             <p style={{ fontSize: '18px', fontWeight: '700', fontFamily: 'var(--font-heading)', marginBottom: '12px' }}>{todayTitle}</p>
-            {todayItem?.recipes?.id ? (
-              <Link
-                href={`/cook/${todayItem.recipes.id}`}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff', color: 'var(--color-forest)', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
-              >
-                <ChefHat size={14} /> Börja laga
-              </Link>
-            ) : (
-              <Link href="/menu" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}>
-                Se meny <ChevronRight size={14} />
-              </Link>
-            )}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {todayItem?.recipes?.id ? (
+                <Link
+                  href={`/recipes/${todayItem.recipes.id}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fff', color: 'var(--color-forest)', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
+                >
+                  Visa recept <ChevronRight size={14} />
+                </Link>
+              ) : (
+                <Link href="/menu" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}>
+                  Se meny <ChevronRight size={14} />
+                </Link>
+              )}
+              {todayItem?.recipes?.id && (
+                <Link
+                  href={`/cook/${todayItem.recipes.id}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}
+                >
+                  <ChefHat size={14} /> Börja laga
+                </Link>
+              )}
+            </div>
           </div>
         ) : (
           <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)', borderRadius: '14px', padding: '16px 18px' }}>
@@ -205,19 +215,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Skafferiet ── */}
+      {/* ── Skafferiet — utgående varor ── */}
       {expiringItems.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
-          <p className="section-label">Skafferiet</p>
+          <p className="section-label">Skafferiet — går ut snart</p>
           <div className="card" style={{ padding: '16px 20px' }}>
             {expiringItems.map((item, i) => (
-              <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: i < expiringItems.length - 1 ? '4px' : '12px' }}>
+              <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: '4px' }}>
                 ⚠️ {item.name} — {formatExpiry(item.expires_at)}
               </p>
             ))}
-            <Link href="/pantry" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600' }}>
-              Se skafferiet →
-            </Link>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
+              <Link
+                href={`/panic?items=${expiringItems.map(i => encodeURIComponent(i.name)).join(',')}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '8px 14px', background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: '600' }}
+              >
+                <AlertCircle size={13} /> Vad kan jag laga?
+              </Link>
+              <Link href="/pantry" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-muted)', fontSize: '13px' }}>
+                Se skafferiet →
+              </Link>
+            </div>
           </div>
         </div>
       )}

@@ -34,7 +34,16 @@ export default function Navbar() {
       }
     }
     loadHousehold()
-  }, [hide])
+
+    // Lyssna på auth-händelser — när refresh token är ogiltig skickar
+    // Supabase ett SIGNED_OUT-event och vi redirectar till login
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/auth/login')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [hide, router])
 
   useEffect(() => {
     function handleClickOutside(e) {

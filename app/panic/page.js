@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
 
@@ -17,6 +17,7 @@ export default function PanicPage() {
   const [results, setResults] = useState(null)
   const [resultSource, setResultSource] = useState(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     async function load() {
@@ -26,15 +27,30 @@ export default function PanicPage() {
       if (!members || members.length === 0) { router.push('/household'); return }
       const hid = members[0].household_id
       setHouseholdId(hid)
-      const { data: items } = await supabase.from('pantry').select('*').eq('household_id', hid).order('name')
+      // Sortera utgående varor överst (nulls sist)
+      const { data: items } = await supabase
+        .from('pantry')
+        .select('*')
+        .eq('household_id', hid)
+        .order('expires_at', { ascending: true, nullsLast: true })
       setPantryItems(items || [])
+
+      // ?items=namn1,namn2 från SOS-knappen på dashboarden → förvälj bara de varorna
+      const preselected = searchParams.get('items')
       const initial = {}
-      if (items) items.forEach(i => { initial[i.id] = true })
+      if (items) {
+        if (preselected) {
+          const names = preselected.split(',').map(n => decodeURIComponent(n).toLowerCase())
+          items.forEach(i => { initial[i.id] = names.includes(i.name.toLowerCase()) })
+        } else {
+          items.forEach(i => { initial[i.id] = true })
+        }
+      }
       setSelected(initial)
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [router, searchParams])
 
   function toggleItem(id) {
     setSelected(prev => ({ ...prev, [id]: !prev[id] }))
@@ -96,23 +112,39 @@ export default function PanicPage() {
 
           {/* Varulista med checkboxar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '24px' }}>
-            {pantryItems.map(item => (
-              <div
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 16px', background: 'var(--bg-card)', border: `1px solid ${selected[item.id] ? 'var(--accent)' : 'var(--border)'}`, borderRadius: '10px', cursor: 'pointer' }}
-              >
-                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${selected[item.id] ? 'var(--accent)' : 'var(--border)'}`, background: selected[item.id] ? 'var(--accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-text)', fontSize: '12px' }}>
-                  {selected[item.id] ? '✓' : ''}
+            {pantryItems.map(item => {
+              const daysLeft = item.expires_at
+                ? Math.ceil((new Date(item.expires_at) - new Date()) / 86400000)
+                : null
+              const isExpiringSoon = daysLeft !== null && daysLeft <= 2
+              const expiryLabel = daysLeft === null ? null
+                : daysLeft < 0 ? 'Utgånget'
+                : daysLeft === 0 ? 'Idag'
+                : daysLeft === 1 ? 'Imorgon'
+                : `${daysLeft}d`
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleItem(item.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 16px', background: 'var(--bg-card)', border: `1px solid ${selected[item.id] ? 'var(--accent)' : isExpiringSoon ? 'var(--warning)' : 'var(--border)'}`, borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${selected[item.id] ? 'var(--accent)' : 'var(--border)'}`, background: selected[item.id] ? 'var(--accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-text)', fontSize: '12px' }}>
+                    {selected[item.id] ? '✓' : ''}
+                  </div>
+                  <span style={{ fontSize: '15px', color: 'var(--text)', fontWeight: '500', flex: 1 }}>{item.name}</span>
+                  {(item.quantity || item.unit) && (
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                      {[item.quantity, item.unit].filter(Boolean).join(' ')}
+                    </span>
+                  )}
+                  {expiryLabel && (
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: isExpiringSoon ? 'var(--warning)' : 'var(--text-muted)', background: isExpiringSoon ? 'rgba(255,149,0,0.1)' : 'var(--bg)', border: `1px solid ${isExpiringSoon ? 'var(--warning)' : 'var(--border)'}`, borderRadius: '6px', padding: '2px 6px', flexShrink: 0 }}>
+                      ⚠️ {expiryLabel}
+                    </span>
+                  )}
                 </div>
-                <span style={{ fontSize: '15px', color: 'var(--text)', fontWeight: '500' }}>{item.name}</span>
-                {(item.quantity || item.unit) && (
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                    {[item.quantity, item.unit].filter(Boolean).join(' ')}
-                  </span>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <button

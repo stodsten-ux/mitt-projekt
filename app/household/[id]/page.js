@@ -50,6 +50,7 @@ export default function HouseholdDetailPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLink, setInviteLink] = useState('')
   const [sendingInvite, setSendingInvite] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const router = useRouter()
   const { id } = useParams()
 
@@ -114,6 +115,20 @@ export default function HouseholdDetailPage() {
     const { data: invites } = await supabase.from('household_invites').select('*').eq('household_id', id).eq('accepted', false).order('id', { ascending: false })
     setPendingInvites(invites || [])
     setSendingInvite(false)
+  }
+
+  async function deleteAccount() {
+    if (!confirm('Är du helt säker? Detta raderar ditt konto och ALL din data permanent. Åtgärden kan inte ångras.')) return
+    setDeletingAccount(true)
+    const res = await fetch('/api/account/delete', { method: 'DELETE' })
+    const data = await res.json()
+    if (data.success) {
+      await supabase.auth.signOut()
+      router.push('/auth/login')
+    } else {
+      alert(`Kunde inte radera kontot: ${data.error}`)
+      setDeletingAccount(false)
+    }
   }
 
   async function cancelInvite(inviteId) {
@@ -408,6 +423,20 @@ export default function HouseholdDetailPage() {
               ))}
             </div>
           )}
+
+          <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--danger)', marginBottom: '8px' }}>Farlig zon</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              Att radera ditt konto tar bort all din data permanent och kan inte ångras.
+            </p>
+            <button
+              onClick={deleteAccount}
+              disabled={deletingAccount}
+              style={{ padding: '11px 20px', background: 'rgba(217,79,59,0.06)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+            >
+              {deletingAccount ? 'Raderar...' : 'Radera mitt konto'}
+            </button>
+          </div>
         </div>
       )}
     </div>

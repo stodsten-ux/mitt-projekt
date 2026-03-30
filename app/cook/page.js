@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Spinner from '../../components/Spinner'
 import { getFallbackImage } from '../../lib/unsplash'
 import { ChefHat, ChevronRight, Sparkles, BookOpen } from 'lucide-react'
+import Image from 'next/image'
 
 const supabase = createClient()
 
@@ -91,13 +92,9 @@ export default function CookIndexPage() {
                   style={{ textDecoration: 'none', display: 'flex', overflow: 'hidden' }}
                 >
                   {/* Miniatyrbild */}
-                  <div style={{
-                    width: '80px',
-                    flexShrink: 0,
-                    backgroundImage: `url(${getFallbackImage(recipe.title)})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }} />
+                  <div style={{ width: '80px', flexShrink: 0, position: 'relative' }}>
+                    <Image src={getFallbackImage(recipe.title)} alt={recipe.title} fill sizes="80px" style={{ objectFit: 'cover' }} />
+                  </div>
                   <div style={{ padding: '14px 16px', flex: 1 }}>
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                       {DAYS[item.day_of_week] || ''}
@@ -128,13 +125,9 @@ export default function CookIndexPage() {
                 style={{ textDecoration: 'none', display: 'block', overflow: 'hidden' }}
               >
                 {/* Bild 16:9 */}
-                <div style={{
-                  width: '100%',
-                  aspectRatio: '16/9',
-                  backgroundImage: `url(${getFallbackImage(recipe.title)})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }} />
+                <div style={{ width: '100%', aspectRatio: '16/9', position: 'relative' }}>
+                  <Image src={getFallbackImage(recipe.title)} alt={recipe.title} fill sizes="(max-width: 600px) 100vw, 350px" style={{ objectFit: 'cover' }} />
+                </div>
                 <div style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                     <h3 style={{ fontSize: '14px', fontFamily: 'var(--font-heading)', color: 'var(--text)', flex: 1, marginRight: '8px', lineHeight: '1.3' }}>{recipe.title}</h3>

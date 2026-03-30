@@ -22,6 +22,8 @@ export default function ShoppingPage() {
   const [priceResults, setPriceResults] = useState(null)
   const [campaignLoading, setCampaignLoading] = useState(false)
   const [campaignResults, setCampaignResults] = useState(null)
+  const [nextWeekLoading, setNextWeekLoading] = useState(false)
+  const [nextWeekResults, setNextWeekResults] = useState(null)
   const [addName, setAddName] = useState('')
   const [addCategory, setAddCategory] = useState('Övrigt')
   const [showAdd, setShowAdd] = useState(false)
@@ -137,6 +139,22 @@ export default function ShoppingPage() {
     setCampaignLoading(false)
   }
 
+  async function fetchNextWeekCampaigns() {
+    if (!activeList) return
+    setNextWeekLoading(true)
+    setNextWeekResults(null)
+    const uncheckedItems = items.filter(i => !i.checked).map(i => i.name)
+    const response = await fetch('/api/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: uncheckedItems, stores: preferredStores, householdId, weekOffset: 1 }),
+    })
+    const data = await response.json()
+    if (data.success) setNextWeekResults(data)
+    else alert('Kunde inte hämta nästa veckas erbjudanden.')
+    setNextWeekLoading(false)
+  }
+
   async function createEmptyList() {
     const title = `Inköpslista ${new Date().toLocaleDateString('sv-SE')}`
     const { data } = await supabase.from('shopping_lists').insert({ household_id: householdId, title, created_by: user.id }).select().single()
@@ -218,6 +236,9 @@ export default function ShoppingPage() {
             <button onClick={fetchCampaignTips} disabled={campaignLoading || items.filter(i => !i.checked).length === 0} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: items.length === 0 ? 'var(--text-muted)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: items.length === 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
               {campaignLoading ? <><Spinner />&nbsp;Söker tips...</> : '🏷️ Kampanjtips'}
             </button>
+            <button onClick={fetchNextWeekCampaigns} disabled={nextWeekLoading} style={{ flex: 1, minWidth: '140px', padding: '11px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+              {nextWeekLoading ? <><Spinner />&nbsp;Söker...</> : '📅 Nästa vecka'}
+            </button>
           </div>
 
           {/* Prisresultat */}
@@ -291,6 +312,45 @@ export default function ShoppingPage() {
               </a>
               {campaignResults.disclaimer && (
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '10px' }}>{campaignResults.disclaimer}</p>
+              )}
+            </div>
+          )}
+
+          {nextWeekResults && (
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>📅 Nästa veckas erbjudanden</h3>
+                <button onClick={() => setNextWeekResults(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '18px', lineHeight: 1 }}>×</button>
+              </div>
+              {nextWeekResults.seasonalTips && (
+                <div style={{ background: 'rgba(0,122,255,0.06)', border: '1px solid rgba(0,122,255,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '13px', color: 'var(--text)' }}>
+                  🌿 {nextWeekResults.seasonalTips}
+                </div>
+              )}
+              {nextWeekResults.campaigns?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                  {nextWeekResults.campaigns.map((c, i) => (
+                    <div key={i} style={{ padding: '10px 0', borderBottom: i < nextWeekResults.campaigns.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text)' }}>{c.item} <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>— {c.store}</span></p>
+                          {c.campaignPrice && <p style={{ fontSize: '12px', color: 'var(--success)', marginTop: '2px' }}>{c.campaignPrice} {c.savings && `(spara ${c.savings})`}</p>}
+                        </div>
+                        {c.confidence && <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }}>{c.confidence} sannolikhet</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {nextWeekResults.recommendations?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {nextWeekResults.recommendations.map((rec, i) => (
+                    <p key={i} style={{ fontSize: '13px', color: 'var(--text-muted)' }}>💡 {rec.item}: {rec.reason}</p>
+                  ))}
+                </div>
+              )}
+              {nextWeekResults.disclaimer && (
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '10px' }}>{nextWeekResults.disclaimer}</p>
               )}
             </div>
           )}

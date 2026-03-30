@@ -1,6 +1,7 @@
 import './globals.css'
 import Navbar from '../components/Navbar'
 import ModeSelector from '../components/ModeSelector'
+import CookieBanner from '../components/CookieBanner'
 
 export const metadata = {
   title: 'Mathandelsagenten — Planera, handla och laga smartare',
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
         <Navbar />
         <ModeSelector />
         {children}
+        <CookieBanner />
       </body>
     </html>
   )

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Spinner from '../../components/Spinner'
 import { getFallbackImage } from '../../lib/unsplash'
 import { Search, Sparkles, BookOpen } from 'lucide-react'
+import Image from 'next/image'
 
 const supabase = createClient()
 
@@ -28,6 +29,7 @@ export default function RecipesPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchResults, setSearchResults] = useState(null)
   const [searchSource, setSearchSource] = useState(null)
+  const [mySharedRatings, setMySharedRatings] = useState({}) // shared_recipe_id → rating
   const router = useRouter()
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function RecipesPage() {
       if (!members || members.length === 0) { router.push('/household'); return }
       const hid = members[0].household_id
       setHouseholdId(hid)
-      await Promise.all([loadRecipes(hid), loadSharedRecipes()])
+      await Promise.all([loadRecipes(hid), loadSharedRecipes(), loadMySharedRatings(hid)])
       setLoading(false)
     }
     load()
@@ -53,6 +55,23 @@ export default function RecipesPage() {
   async function loadSharedRecipes() {
     const { data } = await supabase.from('shared_recipes').select('id, title, description, servings, published_at, recipe_stats(avg_rating, total_ratings)').order('published_at', { ascending: false }).limit(50)
     setSharedRecipes(data || [])
+  }
+
+  async function loadMySharedRatings(hid) {
+    const { data } = await supabase.from('recipe_ratings').select('shared_recipe_id, rating').eq('household_id', hid)
+    if (data) {
+      const map = {}
+      data.forEach(r => { map[r.shared_recipe_id] = r.rating })
+      setMySharedRatings(map)
+    }
+  }
+
+  async function rateSharedRecipe(sharedRecipeId, rating) {
+    setMySharedRatings(prev => ({ ...prev, [sharedRecipeId]: rating }))
+    await supabase.from('recipe_ratings').upsert(
+      { shared_recipe_id: sharedRecipeId, household_id: householdId, rating },
+      { onConflict: 'shared_recipe_id,household_id' }
+    )
   }
 
   async function saveRecipe(recipeData) {
@@ -181,7 +200,9 @@ export default function RecipesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
               {recipes.map(r => (
                 <Link key={r.id} href={`/recipes/${r.id}`} className="card" style={{ textDecoration: 'none', display: 'block', overflow: 'hidden' }}>
-                  <div style={{ width: '100%', aspectRatio: '16/9', backgroundImage: `url(${getFallbackImage(r.title)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                  <div style={{ width: '100%', aspectRatio: '16/9', position: 'relative' }}>
+                    <Image src={getFallbackImage(r.title)} alt={r.title} fill sizes="(max-width: 600px) 100vw, 350px" style={{ objectFit: 'cover' }} />
+                  </div>
                   <div style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                       <h3 style={{ fontSize: '14px', fontFamily: 'var(--font-heading)', color: 'var(--text)', flex: 1, marginRight: '8px', lineHeight: '1.3' }}>{r.title}</h3>
@@ -207,15 +228,21 @@ export default function RecipesPage() {
             </div>
           ) : sharedRecipes.map(r => {
             const stats = Array.isArray(r.recipe_stats) ? r.recipe_stats[0] : r.recipe_stats
+            const myRating = mySharedRatings[r.id] || 0
             return (
               <div key={r.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ marginBottom: '3px', fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{r.title}</h3>
                     {r.description && <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '6px' }}>{r.description}</p>}
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                       <span>{r.servings} port.</span>
                       {stats?.avg_rating > 0 && <span>⭐ {Number(stats.avg_rating).toFixed(1)} ({stats.total_ratings} betyg)</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button key={star} onClick={() => rateSharedRecipe(r.id, star)} title={`Betygsätt ${star} av 5`} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', opacity: star <= myRating ? 1 : 0.25, padding: '0 1px', transition: 'opacity 0.15s' }}>⭐</button>
+                      ))}
                     </div>
                   </div>
                   <button onClick={() => saveSharedRecipe(r)} style={{ marginLeft: '12px', padding: '8px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', flexShrink: 0, color: 'var(--text)' }}>Spara</button>

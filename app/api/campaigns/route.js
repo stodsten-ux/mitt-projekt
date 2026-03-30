@@ -105,7 +105,9 @@ Returnera ENDAST detta JSON utan markdown:
 
     if (!Array.isArray(result.campaigns)) return Response.json({ error: 'Oväntat format från AI' }, { status: 500 })
 
-    return Response.json({ success: true, ...result })
+    return Response.json({ success: true, ...result }, {
+      headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' }
+    })
   } catch (error) {
     console.error('campaigns error:', error)
     return Response.json({ error: error.message }, { status: 500 })

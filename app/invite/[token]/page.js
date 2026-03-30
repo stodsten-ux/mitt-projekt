@@ -73,27 +73,27 @@ export default function InvitePage() {
       {status === 'error' && (
         <>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>❌</p>
-          <h1 style={{ marginBottom: '12px' }}>Ogiltig inbjudan</h1>
-          <p style={{ color: '#666', marginBottom: '24px' }}>Den här inbjudningslänken finns inte.</p>
-          <a href="/" style={{ color: '#000', fontWeight: '500' }}>Gå till startsidan</a>
+          <h1 style={{ marginBottom: '12px', color: 'var(--text)' }}>Ogiltig inbjudan</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Den här inbjudningslänken finns inte.</p>
+          <a href="/" style={{ color: 'var(--accent)', fontWeight: '500', textDecoration: 'none' }}>Gå till startsidan</a>
         </>
       )}
 
       {status === 'expired' && (
         <>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>⏰</p>
-          <h1 style={{ marginBottom: '12px' }}>Inbjudan har gått ut</h1>
-          <p style={{ color: '#666', marginBottom: '24px' }}>Den här inbjudan är redan använd eller har gått ut. Be om en ny inbjudan.</p>
-          <a href="/" style={{ color: '#000', fontWeight: '500' }}>Gå till startsidan</a>
+          <h1 style={{ marginBottom: '12px', color: 'var(--text)' }}>Inbjudan har gått ut</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Den här inbjudan är redan använd eller har gått ut. Be om en ny inbjudan.</p>
+          <a href="/" style={{ color: 'var(--accent)', fontWeight: '500', textDecoration: 'none' }}>Gå till startsidan</a>
         </>
       )}
 
       {status === 'already_member' && (
         <>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>✅</p>
-          <h1 style={{ marginBottom: '12px' }}>Du är redan med</h1>
-          <p style={{ color: '#666', marginBottom: '24px' }}>Du är redan medlem i {household?.display_name || household?.name}.</p>
-          <a href="/" style={{ display: 'inline-block', padding: '12px 24px', background: '#000', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontWeight: '500' }}>
+          <h1 style={{ marginBottom: '12px', color: 'var(--text)' }}>Du är redan med</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Du är redan medlem i {household?.display_name || household?.name}.</p>
+          <a href="/" style={{ display: 'inline-block', padding: '12px 24px', background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: '10px', textDecoration: 'none', fontWeight: '500' }}>
             Gå till appen
           </a>
         </>
@@ -102,21 +102,21 @@ export default function InvitePage() {
       {status === 'valid' && household && (
         <>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>🏠</p>
-          <h1 style={{ marginBottom: '8px', fontSize: '22px' }}>Du är inbjuden!</h1>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
+          <h1 style={{ marginBottom: '8px', fontSize: '22px', color: 'var(--text)' }}>Du är inbjuden!</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
             Du har blivit inbjuden att gå med i hushållet<br />
-            <strong style={{ color: '#000' }}>{household.display_name || household.name}</strong>
+            <strong style={{ color: 'var(--text)' }}>{household.display_name || household.name}</strong>
             <br />
             <span style={{ fontSize: '14px' }}>{household.adults} vuxna · {household.children} barn</span>
           </p>
           <button
             onClick={joinHousehold}
             disabled={joining}
-            style={{ width: '100%', padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', marginBottom: '12px' }}
+            style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '16px', fontWeight: '500', marginBottom: '12px' }}
           >
             {joining ? 'Går med...' : 'Gå med i hushållet'}
           </button>
-          <a href="/" style={{ color: '#666', fontSize: '14px' }}>Avböj</a>
+          <a href="/" style={{ color: 'var(--text-muted)', fontSize: '14px', textDecoration: 'none' }}>Avböj</a>
         </>
       )}
     </div>

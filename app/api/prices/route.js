@@ -51,7 +51,9 @@ Returnera ENDAST detta JSON-objekt utan förklaringar eller markdown:
     const result = JSON.parse(jsonMatch[0])
     if (!Array.isArray(result.items)) return Response.json({ error: 'Oväntat format från AI' }, { status: 500 })
 
-    return Response.json({ success: true, ...result })
+    return Response.json({ success: true, ...result }, {
+      headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' }
+    })
   } catch (error) {
     console.error('prices error:', error)
     return Response.json({ error: error.message }, { status: 500 })

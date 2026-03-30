@@ -34,6 +34,7 @@ export default function MenuPage() {
   const [householdId, setHouseholdId] = useState(null)
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [menuItems, setMenuItems] = useState({})
+  const [menuRecipeIds, setMenuRecipeIds] = useState({})
   const [menuId, setMenuId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,13 +66,19 @@ export default function MenuPage() {
     const { data: menu } = await supabase.from('menus').select('id').eq('household_id', hid).eq('week_start', weekStr).single()
     if (menu) {
       setMenuId(menu.id)
-      const { data: items } = await supabase.from('menu_items').select('day_of_week, custom_title').eq('menu_id', menu.id)
+      const { data: items } = await supabase.from('menu_items').select('day_of_week, custom_title, recipe_id').eq('menu_id', menu.id)
       const map = {}
-      if (items) items.forEach(item => { map[item.day_of_week] = item.custom_title })
+      const recipeMap = {}
+      if (items) items.forEach(item => {
+        map[item.day_of_week] = item.custom_title
+        if (item.recipe_id) recipeMap[item.day_of_week] = item.recipe_id
+      })
       setMenuItems(map)
+      setMenuRecipeIds(recipeMap)
     } else {
       setMenuId(null)
       setMenuItems({})
+      setMenuRecipeIds({})
     }
   }
 
@@ -201,6 +208,7 @@ export default function MenuPage() {
         {DAYS.map((day, i) => {
           const dayNum = i + 1
           const title = menuItems[dayNum]
+          const recipeId = menuRecipeIds[dayNum]
           const isEditing = editingDay === dayNum
           return (
             <div key={dayNum} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '8px' }}>
@@ -216,13 +224,30 @@ export default function MenuPage() {
                   placeholder="Ange rätt..."
                   style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--accent)', fontSize: '14px', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
                 />
+              ) : recipeId ? (
+                // Recept finns — visa klickbar länk + redigeringsknapp
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Link
+                    href={`/recipes/${recipeId}`}
+                    style={{ fontSize: '14px', color: 'var(--text)', textDecoration: 'none', fontWeight: '500', flex: 1, padding: '6px 0' }}
+                  >
+                    {title}
+                  </Link>
+                  <button
+                    onClick={() => startEdit(dayNum)}
+                    title="Redigera"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+                  >
+                    ✏️
+                  </button>
+                </div>
               ) : (
                 <span onClick={() => startEdit(dayNum)} style={{ flex: 1, fontSize: '14px', color: title ? 'var(--text)' : 'var(--border)', cursor: 'pointer', padding: '6px 0' }}>
                   {title || 'Klicka för att lägga till...'}
                 </span>
               )}
               {title && !isEditing && (
-                <button onClick={() => { const n = { ...menuItems }; delete n[dayNum]; setMenuItems(n); saveMenu({ ...menuItems, [dayNum]: undefined }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
+                <button onClick={() => { const n = { ...menuItems }; delete n[dayNum]; const r = { ...menuRecipeIds }; delete r[dayNum]; setMenuItems(n); setMenuRecipeIds(r); saveMenu({ ...menuItems, [dayNum]: undefined }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
               )}
             </div>
           )
