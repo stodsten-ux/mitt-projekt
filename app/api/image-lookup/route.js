@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { GoogleGenAI } from '@google/genai'
 
+let _ai = null
+
 export const dynamic = 'force-dynamic'
 
 function toSlug(title) {
@@ -55,16 +57,23 @@ async function saveToCache(supabase, filename, buffer, mimeType) {
 }
 
 async function tryUnsplash(title) {
-  const key = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY
+  const key = process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY
   if (!key) return null
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(title + ' food swedish')}&per_page=1&orientation=landscape&client_id=${key}`
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(title + ' food swedish')}&per_page=1&orientation=landscape&client_id=${key}`,
+      { signal: controller.signal }
     )
+    clearTimeout(timeout)
     const data = await res.json()
     const url = data.results?.[0]?.urls?.regular
     if (!url) return null
-    const imgRes = await fetch(url)
+    const imgController = new AbortController()
+    const imgTimeout = setTimeout(() => imgController.abort(), 8000)
+    const imgRes = await fetch(url, { signal: imgController.signal })
+    clearTimeout(imgTimeout)
     if (!imgRes.ok) return null
     return Buffer.from(await imgRes.arrayBuffer())
   } catch {
@@ -76,10 +85,10 @@ async function tryGemini(title) {
   const key = process.env.GEMINI_API_KEY
   if (!key) return null
   try {
-    const ai = new GoogleGenAI({ apiKey: key })
-    const response = await ai.models.generateContent({
+    if (!_ai) _ai = new GoogleGenAI({ apiKey: key })
+    const response = await _ai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
-      contents: `A beautiful photo of ${title}, Swedish home cooking, natural light, appetizing`,
+      contents: `A beautiful photo of ${title.slice(0, 100).replace(/[\n\r]/g, ' ')}, Swedish home cooking, natural light, appetizing`,
       config: { responseModalities: ['IMAGE', 'TEXT'] },
     })
     const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)
@@ -122,7 +131,8 @@ export async function POST(request) {
     }
 
     return Response.json({ url: null, source: null })
-  } catch {
+  } catch (e) {
+    console.error('[image-lookup] unexpected error:', e)
     return Response.json({ url: null, source: null })
   }
 }
