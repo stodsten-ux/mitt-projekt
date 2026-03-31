@@ -9,12 +9,8 @@
 - **GitHub:** https://github.com/stodsten-ux/mitt-projekt
 
 ## Dokumentation
-All detaljerad dokumentation finns i `/docs`:
-- `docs/ARCHITECTURE.md` — databas, API, säkerhet
-- `docs/DESIGN.md` — färger, ikoner, bilder, typografi
-- `docs/FEATURES.md` — funktioner att bygga, prioritetsordning
-- `docs/FLOWS.md` — de tre lägena, användarflöden
-- `docs/ROADMAP.md` — framtida funktioner
+- `TODO.md` — sessionlogg: nuläge + prioriterad backlog (läs detta först)
+- `docs/CONTEXT.md` — arkitektur, DB-schema, feature-status, design-tokens, flows, affärsbeslut, roadmap
 
 ## Viktigaste regler (läs alltid dessa)
 1. Sök alltid i databasen INNAN du anropar Claude API
