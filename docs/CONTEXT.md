@@ -59,6 +59,14 @@ components/
 - **recipe_ratings** — id, shared_recipe_id, household_id, rating, times_cooked
 - **recipe_stats** — id, shared_recipe_id, avg_rating, total_ratings, total_cooked, total_saved
 
+### Premium (framtida)
+- **dietist_conversations** — id, household_id, messages (JSONB), created_at, updated_at
+
+### Säkerhetsprinciper
+- Publika tabeller innehåller ALDRIG household_id
+- Modifieringar av delade recept sparas alltid som privata kopior
+- SERVER_ROLE_KEY exponeras aldrig i klientkod
+
 ### Pris & kampanjer (ej skapad ännu 🔲)
 - **price_cache** — id, item_name, store, price, unit, is_campaign, campaign_label, valid_from, valid_until, source, created_at
 
@@ -122,6 +130,12 @@ await expandMenu()
 - Edge runtime för enkla API-routes
 - Logga API-kostnader (Claude, Unsplash)
 - Konvertera övriga img-taggar till next/image
+- Sentry DSN konfigurerat (`@sentry/nextjs` installerat, kräver env: `NEXT_PUBLIC_SENTRY_DSN`)
+
+### Externa integrationer (🔲 ej aktiverade, env vars saknas)
+- **Matpriser.se API** — verifierade matpriser, env: `MATPRISER_API_KEY`
+- **Livsmedelsverkets näringsdatabas** — kalorier/makros per ingrediens, env: `LIVSMEDELSVERKET_API_KEY`
+- **Google Maps** — butikslägen och inköpsrutt, env: `NEXT_PUBLIC_GOOGLE_MAPS_KEY`
 
 ### Premium-features (🔲 ej byggda)
 - Klarna-betalintegration — `npm install @klarna/klarna-payments`
@@ -218,6 +232,13 @@ export const categoryImages = {
 ### Panikfunktionen
 Dashboard/Skafferi → "Vad kan jag laga?" → Välj ingredienser → Sök DB → Om inget → Claude AI → Börja laga
 
+### Onboarding (ny användare)
+```
+Registrera → Bekräfta e-post → Logga in →
+Ingen household_member → Redirect /household + välkomstmeddelande →
+Skapa hushåll → Fyll preferenser → Dashboard
+```
+
 ### Navbar-layout
 ```
 Desktop:  [🌿 Mathandel]  [Planera] [Handla] [Laga]  [Fam X ▾] [Settings]
@@ -231,6 +252,13 @@ Mobil:    bottom navigation — CalendarDays / ShoppingBag / ChefHat / Home
 ### Prismodell
 - **Gratis:** 1 hushåll, max 2 medlemmar, max 20 recept, manuell meny, grundläggande inköpslista, lagaläge, skafferi
 - **Premium (99 kr/mån):** Obegränsat, AI-menyförslag, 3 budgetalternativ, prisjämförelse & kampanjer, dietist-chat, näringsinformation, offline-läge
+
+### Tre budgetalternativ (Premium)
+- 💚 Budgetvecka ~500 kr — enkla råvaror, säsongsanpassat, vegetariskt 3-4 dagar, kyckling
+- 🧡 Balanserad ~800 kr — mix billigt/gott, kyckling + fläsk, en fiskrätt
+- 💜 Lyxvecka ~1200 kr — bättre råvaror, nötkött/lax, mer variation, helgrätt
+
+AI väljer recept baserat på: budgetval → veckans kampanjer → skafferiinnehåll → preferenser/allergier → balans kött/fisk/vegetariskt
 
 ### price_cache — SQL
 ```sql
