@@ -5,7 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
-import { getFallbackImage } from '../../lib/unsplash'
+import { getFallbackImage } from '../../lib/images'
 import { ChefHat, ChevronRight, Sparkles, BookOpen } from 'lucide-react'
 import Image from 'next/image'
 
