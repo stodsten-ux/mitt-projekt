@@ -28,7 +28,7 @@ app/
   api/pantry/check/route.js       # Skafferiavstämning ✅
   api/prices/route.js             # Prisuppskattning ✅
   api/campaigns/route.js          # Kampanjtips ✅
-  api/cron/update-prices/route.js # Prisuppdatering via cron 🔲
+  api/cron/update-prices/route.js # Prisuppdatering via cron ✅
 lib/
   supabase.js                     # Browser-klient ✅
   unsplash.js                     # Bildhjälpfunktioner ✅
@@ -67,8 +67,8 @@ components/
 - Modifieringar av delade recept sparas alltid som privata kopior
 - SERVER_ROLE_KEY exponeras aldrig i klientkod
 
-### Pris & kampanjer (ej skapad ännu 🔲)
-- **price_cache** — id, item_name, store, price, unit, is_campaign, campaign_label, valid_from, valid_until, source, created_at
+### Pris & kampanjer
+- **price_cache** — id, item_name, store, price, unit, is_campaign, campaign_label, valid_from, valid_until, source, created_at ✅
 
 ---
 
@@ -120,8 +120,8 @@ await expandMenu()
 
 ### Öppna (🔲 ej byggda)
 - `invite/[token]/page.js` — acceptera hushållsinbjudan
-- `api/cron/update-prices/route.js` — daglig prisuppdatering (Vercel Cron)
-- `price_cache`-tabell i Supabase — se SQL i Affärsbeslut-sektionen
+- ~~`api/cron/update-prices/route.js`~~ ✅ byggd
+- ~~`price_cache`-tabell i Supabase~~ ✅ SQL klar, behöver köras i Supabase-dashboarden
 - Secrets scanning i GitHub Actions
 - Regelbunden dependency-uppdatering (npm audit månadsvis)
 - Cloudflare Free (aktivera vid första betalande kund)
