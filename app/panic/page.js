@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -9,6 +9,14 @@ import Spinner from '../../components/Spinner'
 const supabase = createClient()
 
 export default function PanicPage() {
+  return (
+    <Suspense fallback={<div className="loading-screen"><Spinner />Laddar...</div>}>
+      <PanicContent />
+    </Suspense>
+  )
+}
+
+function PanicContent() {
   const [householdId, setHouseholdId] = useState(null)
   const [pantryItems, setPantryItems] = useState([])
   const [selected, setSelected] = useState({})
