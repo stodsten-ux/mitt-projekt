@@ -23,6 +23,9 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 4. [ ] Aktivera invite/[token]/page.js — hushållsinbjudningar
 5. [ ] Klarna-integration — Premium-tier + betalvägg i middleware
 6. [ ] Aktivera Secrets scanning i GitHub Actions (repo-inställningar)
+7. [x] Koppla price_cache till inköpslistan — listgenerering sätter pris från cache, "Hitta bästa pris" skriver tillbaka priser till DB, total visas med 2 decimaler
+8. [ ] Uppdatera deprecated npm-paket: rimraf, rollup-plugin-terser, sourcemap-codec, inflight, workbox-*, glob, node-domexception, source-map (beta)
+9. [ ] Fixa @sentry/nextjs deprecation: byt `disableLogger` till `webpack.treeshake.removeDebugLogging`
 
 ## Öppna beslut
 - Ska Klarna eller Stripe användas för betalning? (CONTEXT.md anger Klarna)

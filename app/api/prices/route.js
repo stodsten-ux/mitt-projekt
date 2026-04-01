@@ -46,6 +46,8 @@ export async function POST(request) {
         cachedItems.push({
           name: item,
           bestPrice: `${best.price} kr/${best.unit}`,
+          numericPrice: parseFloat(best.price),
+          unit: best.unit || 'st',
           store: best.store,
           tip: best.is_campaign ? best.campaign_label : null,
           campaign: best.is_campaign ? best.campaign_label : null,
@@ -108,6 +110,8 @@ Returnera ENDAST detta JSON-objekt utan förklaringar eller markdown:
     {
       "name": "Kycklingfilé",
       "bestPrice": "ca 45 kr/kg",
+      "numericPrice": 45.00,
+      "unit": "kg",
       "store": "Willys",
       "tip": "Köp hel kyckling och stycka själv",
       "campaign": "Ofta på rea hos ICA varannan vecka"

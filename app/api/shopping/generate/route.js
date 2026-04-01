@@ -214,15 +214,52 @@ export async function POST(request) {
 
     if (listError || !list) return Response.json({ error: 'Kunde inte skapa inköpslista' }, { status: 500 })
 
-    // 9. Skapa shopping_items kategoriserade
-    const rows = shoppingIngredients.map(ing => ({
-      shopping_list_id: list.id,
-      name: ing.name,
-      quantity: ing.quantity || null,
-      unit: ing.unit || null,
-      store: categorize(ing.name),
-      checked: false,
-    }))
+    // 9. Hämta priser från price_cache
+    const today = new Date().toISOString().split('T')[0]
+    const itemNames = shoppingIngredients.map(ing => ing.name.toLowerCase().trim())
+    const { data: cachedPrices } = await supabase
+      .from('price_cache')
+      .select('item_name, store, price, unit')
+      .in('item_name', itemNames)
+      .gte('valid_until', today)
+
+    // Bygg prismap: per vara, billigaste priset
+    const priceMap = {}
+    if (cachedPrices?.length) {
+      for (const row of cachedPrices) {
+        const key = row.item_name.toLowerCase()
+        if (!priceMap[key] || row.price < priceMap[key].price) {
+          priceMap[key] = row
+        }
+      }
+    }
+
+    // 10. Skapa shopping_items kategoriserade med pris
+    const rows = shoppingIngredients.map(ing => {
+      const cached = priceMap[ing.name.toLowerCase().trim()]
+      let price = null
+      if (cached && ing.quantity) {
+        const qty = parseFloat(ing.quantity)
+        if (!isNaN(qty) && cached.unit === 'kg') {
+          // Räkna om: pris/kg * mängd i kg (anta gram om enhet är g)
+          const qtyKg = ing.unit?.toLowerCase() === 'g' ? qty / 1000 : qty
+          price = Math.round(cached.price * qtyKg * 100) / 100
+        } else if (!isNaN(qty)) {
+          price = Math.round(cached.price * qty * 100) / 100
+        }
+      } else if (cached) {
+        price = cached.price
+      }
+      return {
+        shopping_list_id: list.id,
+        name: ing.name,
+        quantity: ing.quantity || null,
+        unit: ing.unit || null,
+        store: categorize(ing.name),
+        price,
+        checked: false,
+      }
+    })
 
     if (rows.length > 0) await supabase.from('shopping_items').insert(rows)
 

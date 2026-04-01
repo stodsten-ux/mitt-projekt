@@ -111,15 +111,48 @@ export default function ShoppingPage() {
     if (!activeList || items.length === 0) return
     setPriceLoading(true)
     setPriceResults(null)
-    const uncheckedItems = items.filter(i => !i.checked).map(i => i.name)
+    const uncheckedItems = items.filter(i => !i.checked)
     const response = await fetch('/api/prices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: uncheckedItems, stores: preferredStores, includeCampaigns: true }),
+      body: JSON.stringify({ items: uncheckedItems.map(i => i.name), stores: preferredStores, includeCampaigns: true }),
     })
     const data = await response.json()
-    if (data.items) setPriceResults(data)
-    else alert('Kunde inte hämta prisinformation.')
+    if (data.items) {
+      setPriceResults(data)
+      // Skriv tillbaka numeriska priser till shopping_items
+      const updates = []
+      for (const priceItem of data.items) {
+        if (!priceItem.numericPrice) continue
+        const match = uncheckedItems.find(i => i.name.toLowerCase() === priceItem.name.toLowerCase())
+        if (!match) continue
+        let itemPrice = priceItem.numericPrice
+        // Räkna om pris baserat på kvantitet och enhet
+        if (match.quantity && priceItem.unit === 'kg') {
+          const qty = parseFloat(match.quantity)
+          if (!isNaN(qty)) {
+            const qtyKg = match.unit?.toLowerCase() === 'g' ? qty / 1000 : qty
+            itemPrice = Math.round(priceItem.numericPrice * qtyKg * 100) / 100
+          }
+        } else if (match.quantity) {
+          const qty = parseFloat(match.quantity)
+          if (!isNaN(qty)) itemPrice = Math.round(priceItem.numericPrice * qty * 100) / 100
+        }
+        updates.push({ id: match.id, price: itemPrice })
+      }
+      // Uppdatera DB och state
+      for (const u of updates) {
+        await supabase.from('shopping_items').update({ price: u.price }).eq('id', u.id)
+      }
+      if (updates.length > 0) {
+        setItems(prev => prev.map(i => {
+          const u = updates.find(up => up.id === i.id)
+          return u ? { ...i, price: u.price } : i
+        }))
+      }
+    } else {
+      alert('Kunde inte hämta prisinformation.')
+    }
     setPriceLoading(false)
   }
 
@@ -212,14 +245,12 @@ export default function ShoppingPage() {
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Bockat</p>
               <p style={{ fontWeight: '600', fontSize: '18px', color: 'var(--text)' }}>{checkedCount}/{items.length}</p>
             </div>
-            {weeklyBudget && (
-              <div style={{ background: 'var(--bg-card)', border: `1px solid ${totalEstimated > weeklyBudget ? 'var(--danger)' : 'var(--border)'}`, borderRadius: '10px', padding: '12px 16px', flex: 1, minWidth: '120px' }}>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Estimerat / Budget</p>
-                <p style={{ fontWeight: '600', fontSize: '18px', color: totalEstimated > weeklyBudget ? 'var(--danger)' : 'var(--success)' }}>
-                  {totalEstimated > 0 ? `${Math.round(totalEstimated)} kr / ` : ''}{weeklyBudget} kr
-                </p>
-              </div>
-            )}
+            <div style={{ background: 'var(--bg-card)', border: `1px solid ${weeklyBudget && totalEstimated > weeklyBudget ? 'var(--danger)' : 'var(--border)'}`, borderRadius: '10px', padding: '12px 16px', flex: 1, minWidth: '120px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{weeklyBudget ? 'Estimerat / Budget' : 'Estimerat pris'}</p>
+              <p style={{ fontWeight: '600', fontSize: '18px', color: weeklyBudget && totalEstimated > weeklyBudget ? 'var(--danger)' : totalEstimated > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                {totalEstimated > 0 ? `${totalEstimated.toFixed(2)} kr` : 'Ej beräknat'}{weeklyBudget ? ` / ${weeklyBudget} kr` : ''}
+              </p>
+            </div>
           </div>
 
           {/* Åtgärdsknappar */}
@@ -390,7 +421,7 @@ export default function ShoppingPage() {
                         {item.quantity && <span style={{ color: 'var(--text-muted)', fontSize: '13px', marginLeft: '6px' }}>{item.quantity}{item.unit ? ` ${item.unit}` : ''}</span>}
                         {item.category === 'online' && <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--accent)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', padding: '1px 6px' }}>📦 Mathem</span>}
                       </span>
-                      {item.price && <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.price} kr</span>}
+                      {item.price && <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{parseFloat(item.price).toFixed(2)} kr</span>}
                       <button onClick={() => toggleOnline(item)} title={item.category === 'online' ? 'Ta bort Mathem' : 'Beställ via Mathem'} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 2px', opacity: item.category === 'online' ? 1 : 0.3 }}>📦</button>
                       <button onClick={() => deleteItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 2px', lineHeight: 1 }}>×</button>
                     </div>
