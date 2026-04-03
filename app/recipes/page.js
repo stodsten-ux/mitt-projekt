@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,18 +8,15 @@ import Spinner from '../../components/Spinner'
 import { getFallbackImage } from '../../lib/images'
 import { Search, Sparkles, BookOpen } from 'lucide-react'
 import Image from 'next/image'
+import { useHousehold } from '../../lib/hooks/useHousehold'
+import { useRecipes, useSharedRecipes, useMyRatings } from '../../lib/hooks/useRecipes'
 
 const supabase = createClient()
 
 const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
 
 export default function RecipesPage() {
-  const [user, setUser] = useState(null)
-  const [householdId, setHouseholdId] = useState(null)
   const [activeTab, setActiveTab] = useState('mine')
-  const [recipes, setRecipes] = useState([])
-  const [sharedRecipes, setSharedRecipes] = useState([])
-  const [loading, setLoading] = useState(true)
   const [view, setView] = useState('list')
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -29,49 +26,22 @@ export default function RecipesPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchResults, setSearchResults] = useState(null)
   const [searchSource, setSearchSource] = useState(null)
-  const [mySharedRatings, setMySharedRatings] = useState({}) // shared_recipe_id → rating
   const router = useRouter()
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      setUser(user)
-      const { data: members } = await supabase.from('household_members').select('household_id').eq('user_id', user.id).limit(1)
-      if (!members || members.length === 0) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      await Promise.all([loadRecipes(hid), loadSharedRecipes(), loadMySharedRatings(hid)])
-      setLoading(false)
-    }
-    load()
-  }, [router])
+  const { user, householdId, isLoading: authLoading } = useHousehold()
+  const { recipes, isLoading: recipesLoading, mutate: mutateRecipes } = useRecipes(householdId)
+  const { sharedRecipes } = useSharedRecipes()
+  const { ratings: mySharedRatings, mutate: mutateRatings } = useMyRatings(householdId)
 
-  async function loadRecipes(hid) {
-    const { data } = await supabase.from('recipes').select('id, title, description, servings, ai_generated').eq('household_id', hid).order('id', { ascending: false })
-    setRecipes(data || [])
-  }
-
-  async function loadSharedRecipes() {
-    const { data } = await supabase.from('shared_recipes').select('id, title, description, servings, published_at, recipe_stats(avg_rating, total_ratings)').order('published_at', { ascending: false }).limit(50)
-    setSharedRecipes(data || [])
-  }
-
-  async function loadMySharedRatings(hid) {
-    const { data } = await supabase.from('recipe_ratings').select('shared_recipe_id, rating').eq('household_id', hid)
-    if (data) {
-      const map = {}
-      data.forEach(r => { map[r.shared_recipe_id] = r.rating })
-      setMySharedRatings(map)
-    }
-  }
+  const loading = authLoading || recipesLoading
 
   async function rateSharedRecipe(sharedRecipeId, rating) {
-    setMySharedRatings(prev => ({ ...prev, [sharedRecipeId]: rating }))
+    mutateRatings({ ...mySharedRatings, [sharedRecipeId]: rating }, false)
     await supabase.from('recipe_ratings').upsert(
       { shared_recipe_id: sharedRecipeId, household_id: householdId, rating },
       { onConflict: 'shared_recipe_id,household_id' }
     )
+    mutateRatings()
   }
 
   async function saveRecipe(recipeData) {
