@@ -1,7 +1,10 @@
 import './globals.css'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from '../components/Navbar'
 import ModeSelector from '../components/ModeSelector'
 import CookieBanner from '../components/CookieBanner'
+import SWRProvider from './swr-provider'
 
 export const metadata = {
   title: 'Mathandelsagenten — Planera, handla och laga smartare',
@@ -38,8 +41,10 @@ export default function RootLayout({ children }) {
       <body style={{ paddingTop: '104px' }}>
         <Navbar />
         <ModeSelector />
-        {children}
+        <SWRProvider>{children}</SWRProvider>
         <CookieBanner />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
