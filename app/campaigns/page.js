@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
 
@@ -14,30 +14,22 @@ const URGENCY_BG = { hög: 'rgba(52,199,89,0.08)', medel: 'rgba(255,149,0,0.08)'
 const URGENCY_BORDER = { hög: 'var(--success)', medel: 'var(--warning)', låg: 'var(--border)' }
 
 export default function CampaignsPage() {
-  const [householdId, setHouseholdId] = useState(null)
-  const [selectedStores, setSelectedStores] = useState([])
+  const { householdId, isLoading: authLoading } = useHousehold()
+  const [selectedStores, setSelectedStores] = useState(['ICA', 'Willys'])
   const [weekOffset, setWeekOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [storesLoaded, setStoresLoaded] = useState(false)
   const [searching, setSearching] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
-  const router = useRouter()
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      const { data: members } = await supabase.from('household_members').select('household_id').eq('user_id', user.id).limit(1)
-      if (!members?.length) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      const { data: prefs } = await supabase.from('household_preferences').select('preferred_stores').eq('household_id', hid).maybeSingle()
-      const stores = prefs?.preferred_stores?.length ? prefs.preferred_stores : ['ICA', 'Willys']
-      setSelectedStores(stores)
-      setLoading(false)
-    }
-    load()
-  }, [router])
+    if (!householdId) return
+    supabase.from('household_preferences').select('preferred_stores').eq('household_id', householdId).maybeSingle()
+      .then(({ data: prefs }) => {
+        if (prefs?.preferred_stores?.length) setSelectedStores(prefs.preferred_stores)
+        setStoresLoaded(true)
+      })
+  }, [householdId])
 
   function toggleStore(store) {
     setSelectedStores(prev =>
@@ -72,7 +64,7 @@ export default function CampaignsPage() {
     return acc
   }, {})
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (authLoading || !storesLoaded) return <div className="loading-screen"><Spinner />Laddar...</div>
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
