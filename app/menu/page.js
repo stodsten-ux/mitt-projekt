@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { useHousehold } from '../../lib/hooks/useHousehold'
+import { useMenu } from '../../lib/hooks/useMenu'
 
 const supabase = createClient()
 
@@ -30,13 +32,9 @@ function formatWeekLabel(weekStart) {
 }
 
 export default function MenuPage() {
-  const [user, setUser] = useState(null)
-  const [householdId, setHouseholdId] = useState(null)
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
-  const [menuItems, setMenuItems] = useState({})
-  const [menuRecipeIds, setMenuRecipeIds] = useState({})
-  const [menuId, setMenuId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [localMenuItems, setLocalMenuItems] = useState(null)
+  const [localRecipeIds, setLocalRecipeIds] = useState(null)
   const [saving, setSaving] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [shoppingLoading, setShoppingLoading] = useState(false)
@@ -46,47 +44,25 @@ export default function MenuPage() {
   const [editValue, setEditValue] = useState('')
   const router = useRouter()
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      setUser(user)
-      const { data: members } = await supabase.from('household_members').select('household_id').eq('user_id', user.id).limit(1)
-      if (!members || members.length === 0) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      await loadMenu(hid, getWeekStart(new Date()))
-      setLoading(false)
-    }
-    load()
-  }, [router])
+  const { user, householdId, isLoading: householdLoading } = useHousehold()
+  const {
+    menuId,
+    menuItems: swrMenuItems,
+    menuRecipeIds: swrRecipeIds,
+    mutate: mutateMenu,
+  } = useMenu(householdId, weekStart)
 
-  async function loadMenu(hid, week) {
-    const weekStr = formatDate(week)
-    const { data: menu } = await supabase.from('menus').select('id').eq('household_id', hid).eq('week_start', weekStr).single()
-    if (menu) {
-      setMenuId(menu.id)
-      const { data: items } = await supabase.from('menu_items').select('day_of_week, custom_title, recipe_id').eq('menu_id', menu.id)
-      const map = {}
-      const recipeMap = {}
-      if (items) items.forEach(item => {
-        map[item.day_of_week] = item.custom_title
-        if (item.recipe_id) recipeMap[item.day_of_week] = item.recipe_id
-      })
-      setMenuItems(map)
-      setMenuRecipeIds(recipeMap)
-    } else {
-      setMenuId(null)
-      setMenuItems({})
-      setMenuRecipeIds({})
-    }
-  }
+  // Use local (unsaved edits) state when set, fall back to SWR data
+  const menuItems = localMenuItems ?? swrMenuItems
+  const menuRecipeIds = localRecipeIds ?? swrRecipeIds
 
-  async function changeWeek(delta) {
+  function changeWeek(delta) {
     const newWeek = new Date(weekStart)
     newWeek.setDate(newWeek.getDate() + delta * 7)
     setWeekStart(newWeek)
-    if (householdId) await loadMenu(householdId, newWeek)
+    // Reset local edits — SWR will fetch new week via key change
+    setLocalMenuItems(null)
+    setLocalRecipeIds(null)
   }
 
   async function saveMenu(items) {
@@ -96,12 +72,12 @@ export default function MenuPage() {
     if (!mid) {
       const { data: newMenu } = await supabase.from('menus').insert({ household_id: householdId, week_start: weekStr, created_by: user.id }).select('id').single()
       mid = newMenu.id
-      setMenuId(mid)
     }
     await supabase.from('menu_items').delete().eq('menu_id', mid)
     const rows = Object.entries(items).filter(([, title]) => title?.trim()).map(([day, title]) => ({ menu_id: mid, day_of_week: parseInt(day), meal_type: 'dinner', custom_title: title.trim() }))
     if (rows.length > 0) await supabase.from('menu_items').insert(rows)
     setSaving(false)
+    await mutateMenu()
     return mid
   }
 
@@ -126,7 +102,7 @@ export default function MenuPage() {
         const dayNum = keyMap[key.toLowerCase()]
         if (dayNum) newItems[dayNum] = val
       }
-      setMenuItems(newItems)
+      setLocalMenuItems(newItems)
       // saveMenu returnerar det faktiska menu-ID:t — undviker stale state-closure
       const savedMenuId = await saveMenu(newItems)
       setAiLoading(false)
@@ -156,6 +132,7 @@ export default function MenuPage() {
       setExpandStatus('Kunde inte generera recept. Försök igen.')
     }
     setExpandLoading(false)
+    await mutateMenu()
   }
 
   async function generateShoppingList() {
@@ -182,7 +159,7 @@ export default function MenuPage() {
   async function finishEdit(dayNum) {
     const newItems = { ...menuItems, [dayNum]: editValue }
     if (!editValue.trim()) delete newItems[dayNum]
-    setMenuItems(newItems)
+    setLocalMenuItems(newItems)
     setEditingDay(null)
     setEditValue('')
     await saveMenu(newItems)
@@ -190,7 +167,7 @@ export default function MenuPage() {
 
   const hasItems = Object.keys(menuItems).length > 0
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (householdLoading) return <div className="loading-screen"><Spinner />Laddar...</div>
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
@@ -247,7 +224,7 @@ export default function MenuPage() {
                 </span>
               )}
               {title && !isEditing && (
-                <button onClick={() => { const n = { ...menuItems }; delete n[dayNum]; const r = { ...menuRecipeIds }; delete r[dayNum]; setMenuItems(n); setMenuRecipeIds(r); saveMenu({ ...menuItems, [dayNum]: undefined }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
+                <button onClick={() => { const n = { ...menuItems }; delete n[dayNum]; const r = { ...menuRecipeIds }; delete r[dayNum]; setLocalMenuItems(n); setLocalRecipeIds(r); saveMenu({ ...menuItems, [dayNum]: undefined }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
               )}
             </div>
           )
