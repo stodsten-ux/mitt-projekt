@@ -5,18 +5,27 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { useHousehold } from '../../lib/hooks/useHousehold'
+import { useShoppingLists, useShoppingItems } from '../../lib/hooks/useShoppingList'
 
 const supabase = createClient()
 
 const CATEGORIES = ['Frukt & grönt', 'Mejeri', 'Kött & fisk', 'Torrvaror', 'Bröd & bakverk', 'Fryst', 'Dryck', 'Övrigt']
 
 export default function ShoppingPage() {
-  const [user, setUser] = useState(null)
-  const [householdId, setHouseholdId] = useState(null)
-  const [lists, setLists] = useState([])
-  const [activeList, setActiveList] = useState(null)
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user, householdId, householdData, isLoading: authLoading } = useHousehold()
+  const { lists, isLoading: listsLoading, mutate: mutateLists } = useShoppingLists(householdId)
+  const [activeListId, setActiveListId] = useState(null)
+
+  // Auto-select first list
+  const effectiveActiveListId = activeListId ?? lists[0]?.id ?? null
+  const activeList = lists.find(l => l.id === effectiveActiveListId) ?? null
+
+  const { items, isLoading: itemsLoading, mutate: mutateItems } = useShoppingItems(effectiveActiveListId)
+
+  const weeklyBudget = householdData?.weekly_budget ?? null
+  const [preferredStores, setPreferredStores] = useState([])
+
   const [aiLoading, setAiLoading] = useState(false)
   const [priceLoading, setPriceLoading] = useState(false)
   const [priceResults, setPriceResults] = useState(null)
@@ -27,45 +36,25 @@ export default function ShoppingPage() {
   const [addName, setAddName] = useState('')
   const [addCategory, setAddCategory] = useState('Övrigt')
   const [showAdd, setShowAdd] = useState(false)
-  const [weeklyBudget, setWeeklyBudget] = useState(null)
-  const [preferredStores, setPreferredStores] = useState([])
   const [useMathem, setUseMathem] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      setUser(user)
-      const { data: members } = await supabase.from('household_members').select('household_id, households(weekly_budget)').eq('user_id', user.id).limit(1)
-      if (!members || members.length === 0) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      setWeeklyBudget(members[0].households?.weekly_budget || null)
-      const { data: prefs } = await supabase.from('household_preferences').select('preferred_stores').eq('household_id', hid).single()
-      if (prefs?.preferred_stores?.length) setPreferredStores(prefs.preferred_stores)
-      const { data: shoppingLists } = await supabase.from('shopping_lists').select('id, title, created_at').eq('household_id', hid).order('created_at', { ascending: false })
-      setLists(shoppingLists || [])
-      if (shoppingLists && shoppingLists.length > 0) {
-        await loadItems(shoppingLists[0].id)
-        setActiveList(shoppingLists[0])
-      }
-      setLoading(false)
-    }
-    load()
-  }, [router])
+    if (!householdId) return
+    supabase.from('household_preferences').select('preferred_stores').eq('household_id', householdId).single()
+      .then(({ data }) => {
+        if (data?.preferred_stores?.length) setPreferredStores(data.preferred_stores)
+      })
+  }, [householdId])
 
-  async function loadItems(listId) {
-    const { data } = await supabase.from('shopping_items').select('*').eq('shopping_list_id', listId).order('store')
-    setItems(data || [])
-  }
+  const loading = authLoading || listsLoading
 
-  async function switchList(list) { setActiveList(list); await loadItems(list.id) }
+  function switchList(list) { setActiveListId(list.id) }
 
   async function toggleItem(item) {
     const checked = !item.checked
     await supabase.from('shopping_items').update({ checked }).eq('id', item.id)
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, checked } : i))
+    mutateItems()
     if (checked) {
       await supabase.from('pantry').insert({ household_id: householdId, name: item.name, quantity: item.quantity || null, unit: item.unit || null })
     }
@@ -73,8 +62,8 @@ export default function ShoppingPage() {
 
   async function addItem() {
     if (!addName.trim() || !activeList) return
-    const { data } = await supabase.from('shopping_items').insert({ shopping_list_id: activeList.id, name: addName.trim(), store: addCategory, checked: false, category: useMathem ? 'online' : null }).select().single()
-    if (data) setItems(prev => [...prev, data])
+    await supabase.from('shopping_items').insert({ shopping_list_id: activeList.id, name: addName.trim(), store: addCategory, checked: false, category: useMathem ? 'online' : null })
+    mutateItems()
     setAddName('')
     setShowAdd(false)
   }
@@ -82,12 +71,13 @@ export default function ShoppingPage() {
   async function toggleOnline(item) {
     const isOnline = item.category === 'online'
     await supabase.from('shopping_items').update({ category: isOnline ? null : 'online' }).eq('id', item.id)
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, category: isOnline ? null : 'online' } : i))
+    mutateItems()
   }
 
   async function deleteItem(id) {
+    mutateItems(items.filter(i => i.id !== id), false)
     await supabase.from('shopping_items').delete().eq('id', id)
-    setItems(prev => prev.filter(i => i.id !== id))
+    mutateItems()
   }
 
   async function optimizeWithAi() {
@@ -145,10 +135,7 @@ export default function ShoppingPage() {
         await supabase.from('shopping_items').update({ price: u.price }).eq('id', u.id)
       }
       if (updates.length > 0) {
-        setItems(prev => prev.map(i => {
-          const u = updates.find(up => up.id === i.id)
-          return u ? { ...i, price: u.price } : i
-        }))
+        mutateItems()
       }
     } else {
       alert('Kunde inte hämta prisinformation.')
@@ -191,7 +178,10 @@ export default function ShoppingPage() {
   async function createEmptyList() {
     const title = `Inköpslista ${new Date().toLocaleDateString('sv-SE')}`
     const { data } = await supabase.from('shopping_lists').insert({ household_id: householdId, title, created_by: user.id }).select().single()
-    if (data) { setLists(prev => [data, ...prev]); setActiveList(data); setItems([]) }
+    if (data) {
+      await mutateLists()
+      setActiveListId(data.id)
+    }
   }
 
   if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
