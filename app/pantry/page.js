@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { useHousehold } from '../../lib/hooks/useHousehold'
+import { usePantry } from '../../lib/hooks/usePantry'
 
 const supabase = createClient()
 
@@ -24,32 +25,12 @@ function expiryLabel(days) {
 const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
 
 export default function PantryPage() {
-  const [householdId, setHouseholdId] = useState(null)
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { householdId, isLoading: householdLoading } = useHousehold()
+  const { items, isLoading: pantryLoading, mutate } = usePantry(householdId)
+
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', quantity: '', unit: '', expires_at: '' })
-  const router = useRouter()
-
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      const { data: members } = await supabase.from('household_members').select('household_id').eq('user_id', user.id).limit(1)
-      if (!members || members.length === 0) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      await loadItems(hid)
-      setLoading(false)
-    }
-    load()
-  }, [router])
-
-  async function loadItems(hid) {
-    const { data } = await supabase.from('pantry').select('*').eq('household_id', hid).order('expires_at', { ascending: true, nullsLast: true })
-    setItems(data || [])
-  }
 
   async function addItem() {
     if (!form.name.trim()) return
@@ -57,16 +38,18 @@ export default function PantryPage() {
     await supabase.from('pantry').insert({ household_id: householdId, name: form.name.trim(), quantity: form.quantity.trim() || null, unit: form.unit.trim() || null, expires_at: form.expires_at || null })
     setForm({ name: '', quantity: '', unit: '', expires_at: '' })
     setShowForm(false)
-    await loadItems(householdId)
+    await mutate()
     setSaving(false)
   }
 
   async function deleteItem(id) {
+    const newData = items.filter(i => i.id !== id)
+    mutate(newData, false)
     await supabase.from('pantry').delete().eq('id', id)
-    setItems(prev => prev.filter(i => i.id !== id))
+    mutate()
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (householdLoading || pantryLoading) return <div className="loading-screen"><Spinner />Laddar...</div>
 
   const expiringSoon = items.filter(i => { const d = daysUntilExpiry(i.expires_at); return d !== null && d <= 3 })
 
