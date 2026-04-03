@@ -39,8 +39,9 @@ function categorize(name) {
 
 async function getIngredientsFromAI(dishes, householdContext) {
   const dishList = dishes.join(', ')
+  console.time('shopping-generate-ai')
   const message = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2000,
     system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${householdContext}`,
     messages: [{
@@ -51,6 +52,7 @@ Returnera BARA JSON i detta format:
 Inkludera alla ingredienser som behövs. Returnera BARA JSON-arrayen.`,
     }],
   })
+  console.timeEnd('shopping-generate-ai')
   const raw = message.content[0].text
   const start = raw.indexOf('[')
   if (start === -1) throw new Error('AI returnerade ingen ingredienslista')

@@ -183,23 +183,35 @@ export default function CookPage() {
     setCurrentStep(s => Math.max(0, s - 1))
   }
 
-  // Substitut via AI
+  // Substitut via AI (streaming)
   async function askSubstitut(ingredientName) {
     if (substitutIngredient === ingredientName) { setSubstitutIngredient(null); return }
     setSubstitutIngredient(ingredientName)
     setSubstitutText('')
     setLoadingSubstitut(true)
-    const prefs = recipe?.household_id
-    const res = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: `Vad kan jag använda istället för ${ingredientName} i "${recipe.title}"? Ge ett kort praktiskt svar på max 2 meningar.`,
-        householdId,
-      }),
-    })
-    const data = await res.json()
-    setSubstitutText(data.content || 'Inget substitut hittades.')
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `Vad kan jag använda istället för ${ingredientName} i "${recipe.title}"? Ge ett kort praktiskt svar på max 2 meningar.`,
+          householdId,
+          stream: true,
+        }),
+      })
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let text = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        text += decoder.decode(value, { stream: true })
+        setSubstitutText(text)
+      }
+      if (!text) setSubstitutText('Inget substitut hittades.')
+    } catch {
+      setSubstitutText('Kunde inte hämta substitut.')
+    }
     setLoadingSubstitut(false)
   }
 

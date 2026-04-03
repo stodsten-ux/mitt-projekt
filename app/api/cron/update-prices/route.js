@@ -43,8 +43,10 @@ export async function GET(request) {
     const batches = chunk(allItems, 15)
     const results = []
 
-    for (const batch of batches) {
-      const prices = await estimatePrices(batch)
+    for (let i = 0; i < batches.length; i++) {
+      console.time(`cron-prices-batch-${i}`)
+      const prices = await estimatePrices(batches[i])
+      console.timeEnd(`cron-prices-batch-${i}`)
       results.push(...prices)
     }
 
@@ -116,7 +118,7 @@ async function estimatePrices(items) {
   const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4000,
     system: `Du är en databas över svenska matpriser. Ge realistiska prisuppskattningar baserade på typiska svenska livsmedelspriser 2025-2026. Svara BARA med JSON, ingen annan text.`,
     messages: [{

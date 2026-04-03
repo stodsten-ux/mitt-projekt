@@ -62,7 +62,9 @@ export async function POST(request) {
     let aiItems = []
     let weeklyTip = null
     if (uncachedItems.length > 0) {
+      console.time('prices-ai')
       const aiResult = await estimateWithAI(uncachedItems, storeList.join(', '), includeCampaigns)
+      console.timeEnd('prices-ai')
       aiItems = aiResult.items || []
       weeklyTip = aiResult.weeklyTip
     }
@@ -95,7 +97,7 @@ Inkludera ett "campaign" fält med kampanjinfo om du känner till något, annars
     : ''
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4000,
     system: 'Du är en hjälpsam assistent med kunskap om svenska matpriser och butikskedjornas kampanjmönster. Svara alltid på svenska. Ge alltid rimliga uppskattningar baserade på din träningsdata om svenska livsmedelspriser.',
     messages: [{

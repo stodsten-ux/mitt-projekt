@@ -45,8 +45,9 @@ export async function POST(request) {
       ? `\nFokusera särskilt på kampanjer för dessa varor: ${items.slice(0, 15).join(', ')}.`
       : ''
 
+    console.time('campaigns-ai')
     const message = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       system: `Du är en expert på svenska butikskedjors kampanjmönster och erbjudanden.
 Du känner till typiska kampanjcykler för ICA, Willys, Coop, Lidl, Hemköp, Citygross och Netto.
@@ -88,6 +89,8 @@ Returnera ENDAST detta JSON utan markdown:
 }`,
       }],
     })
+
+    console.timeEnd('campaigns-ai')
 
     const raw = message.content[0].text.trim()
     const start = raw.indexOf('{')

@@ -14,7 +14,7 @@ const HOUSEHOLD_TYPE_CONTEXT = {
 
 export async function POST(request) {
   try {
-    const { prompt, householdId } = await request.json()
+    const { prompt, householdId, stream: useStream } = await request.json()
 
     let householdContext = ''
 
@@ -63,17 +63,55 @@ export async function POST(request) {
       }
     }
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 1024,
-      system: `Du är en hjälpsam matplaneringsassistent.
+    const systemPrompt = `Du är en hjälpsam matplaneringsassistent.
 Du hjälper familjer att planera veckomeny, hitta recept och skapa inköpslistor.
 Svara alltid på svenska.
 När du föreslår recept, inkludera alltid ingredienser med mängder och enkla instruktioner.
 När du föreslår inköpslistor, gruppera varor per butikskategori.
-${householdContext}`,
+${householdContext}`
+
+    if (useStream) {
+      console.time('ai-stream-ttft')
+      const stream = await client.messages.stream({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }],
+      })
+
+      let firstToken = true
+      const encoder = new TextEncoder()
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const event of stream) {
+              if (event.type === 'content_block_delta' && event.delta?.text) {
+                if (firstToken) { console.timeEnd('ai-stream-ttft'); firstToken = false }
+                controller.enqueue(encoder.encode(event.delta.text))
+              }
+            }
+            console.timeEnd('ai-stream-total')
+            controller.close()
+          } catch (err) {
+            controller.error(err)
+          }
+        },
+      })
+      console.time('ai-stream-total')
+
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' },
+      })
+    }
+
+    console.time('ai-nostream')
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
     })
+    console.timeEnd('ai-nostream')
 
     return Response.json({ success: true, content: message.content[0].text })
   } catch (error) {

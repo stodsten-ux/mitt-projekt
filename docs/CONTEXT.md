@@ -76,7 +76,7 @@ components/
 
 - Route: `POST /api/ai` — tar emot `{ prompt, householdId }`
 - Hushållets profil skickas som systemkontext (namn, vuxna, barn, budget, allergier, preferenser)
-- Modell: `claude-opus-4-6` — svarar alltid på svenska
+- Modell: `claude-sonnet-4-6` för alla routes (snabbare + billigare). `/api/ai` stödjer streaming via `stream: true`
 
 ### Receptsökningslogik
 ```

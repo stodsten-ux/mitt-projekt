@@ -41,20 +41,18 @@ export async function POST(request) {
       return Response.json({ success: true, created: 0, message: 'Alla rätter har redan recept' })
     }
 
-    let created = 0
-    const results = []
+    const validItems = menuItems.filter(item => item.custom_title?.trim())
 
-    for (const item of menuItems) {
-      if (!item.custom_title?.trim()) continue
-
-      try {
-        const message = await client.messages.create({
-          model: 'claude-opus-4-6',
-          max_tokens: 1500,
-          system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${contextLines}`,
-          messages: [{
-            role: 'user',
-            content: `Generera ett komplett recept för "${item.custom_title}".
+    // Parallellisera alla AI-anrop istället för sekventiell loop
+    console.time('menu-expand-ai-total')
+    const settled = await Promise.allSettled(validItems.map(async (item) => {
+      const message = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${contextLines}`,
+        messages: [{
+          role: 'user',
+          content: `Generera ett komplett recept för "${item.custom_title}".
 Returnera ENDAST giltig JSON utan markdown:
 {
   "title": "Receptnamn",
@@ -66,63 +64,57 @@ Returnera ENDAST giltig JSON utan markdown:
   ],
   "instructions": "Steg-för-steg instruktioner"
 }`,
-          }],
-        })
+        }],
+      })
 
-        const raw = message.content[0].text.trim()
-        // Extrahera första välbalanserade JSON-objekt
-        const start = raw.indexOf('{')
-        if (start === -1) continue
-        let depth = 0, end = -1
-        for (let i = start; i < raw.length; i++) {
-          if (raw[i] === '{') depth++
-          else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break } }
-        }
-        if (end === -1) continue
-        let recipe
-        try { recipe = JSON.parse(raw.slice(start, end + 1)) }
-        catch { continue }
-
-        // Normera ingredienser till {name, quantity} format
-        const ingredients = (recipe.ingredients || []).map(ing => ({
-          name: ing.name,
-          quantity: ing.amount ? String(ing.amount) : '',
-          unit: ing.unit || '',
-        }))
-
-        // Spara receptet
-        const { data: saved } = await supabase
-          .from('recipes')
-          .insert({
-            household_id: householdId,
-            created_by: user.id,
-            title: recipe.title || item.custom_title,
-            description: recipe.description || '',
-            servings: recipe.servings || 4,
-            ingredients,
-            instructions: recipe.instructions || '',
-            ai_generated: true,
-          })
-          .select('id')
-          .single()
-
-        if (saved?.id) {
-          // Koppla recipe_id till menu_item
-          await supabase
-            .from('menu_items')
-            .update({ recipe_id: saved.id })
-            .eq('id', item.id)
-
-          created++
-          results.push({ title: item.custom_title, recipeId: saved.id })
-        }
-      } catch (err) {
-        console.error(`Failed to expand "${item.custom_title}":`, err.message)
-        // Fortsätt med nästa rätt
+      const raw = message.content[0].text.trim()
+      const start = raw.indexOf('{')
+      if (start === -1) throw new Error('No JSON')
+      let depth = 0, end = -1
+      for (let i = start; i < raw.length; i++) {
+        if (raw[i] === '{') depth++
+        else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break } }
       }
+      if (end === -1) throw new Error('Incomplete JSON')
+      const recipe = JSON.parse(raw.slice(start, end + 1))
+
+      const ingredients = (recipe.ingredients || []).map(ing => ({
+        name: ing.name,
+        quantity: ing.amount ? String(ing.amount) : '',
+        unit: ing.unit || '',
+      }))
+
+      const { data: saved } = await supabase
+        .from('recipes')
+        .insert({
+          household_id: householdId,
+          created_by: user.id,
+          title: recipe.title || item.custom_title,
+          description: recipe.description || '',
+          servings: recipe.servings || 4,
+          ingredients,
+          instructions: recipe.instructions || '',
+          ai_generated: true,
+        })
+        .select('id')
+        .single()
+
+      if (saved?.id) {
+        await supabase.from('menu_items').update({ recipe_id: saved.id }).eq('id', item.id)
+        return { title: item.custom_title, recipeId: saved.id }
+      }
+      throw new Error('Insert failed')
+    }))
+
+    console.timeEnd('menu-expand-ai-total')
+
+    const results = []
+    for (const r of settled) {
+      if (r.status === 'fulfilled') results.push(r.value)
+      else console.error('Failed to expand recipe:', r.reason?.message)
     }
 
-    return Response.json({ success: true, created, results })
+    return Response.json({ success: true, created: results.length, results })
   } catch (error) {
     console.error('menu/expand error:', error)
     return Response.json({ error: error.message }, { status: 500 })
