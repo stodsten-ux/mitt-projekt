@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { createClient } from '../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
-
-const supabase = createClient()
+import { useHousehold } from '../../lib/hooks/useHousehold'
+import { usePantry } from '../../lib/hooks/usePantry'
 
 export default function PanicPage() {
   return (
@@ -17,48 +16,29 @@ export default function PanicPage() {
 }
 
 function PanicContent() {
-  const [householdId, setHouseholdId] = useState(null)
-  const [pantryItems, setPantryItems] = useState([])
+  const { householdId, isLoading: authLoading } = useHousehold()
+  const { items: pantryItems, isLoading: pantryLoading } = usePantry(householdId)
   const [selected, setSelected] = useState({})
-  const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState(null)
   const [resultSource, setResultSource] = useState(null)
-  const router = useRouter()
   const searchParams = useSearchParams()
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      const { data: members } = await supabase.from('household_members').select('household_id').eq('user_id', user.id).limit(1)
-      if (!members || members.length === 0) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
-      // Sortera utgående varor överst (nulls sist)
-      const { data: items } = await supabase
-        .from('pantry')
-        .select('*')
-        .eq('household_id', hid)
-        .order('expires_at', { ascending: true, nullsLast: true })
-      setPantryItems(items || [])
+  const loading = authLoading || pantryLoading
 
-      // ?items=namn1,namn2 från SOS-knappen på dashboarden → förvälj bara de varorna
-      const preselected = searchParams.get('items')
-      const initial = {}
-      if (items) {
-        if (preselected) {
-          const names = preselected.split(',').map(n => decodeURIComponent(n).toLowerCase())
-          items.forEach(i => { initial[i.id] = names.includes(i.name.toLowerCase()) })
-        } else {
-          items.forEach(i => { initial[i.id] = true })
-        }
-      }
-      setSelected(initial)
-      setLoading(false)
+  useEffect(() => {
+    if (pantryLoading || pantryItems.length === 0) return
+
+    const preselected = searchParams.get('items')
+    const initial = {}
+    if (preselected) {
+      const names = preselected.split(',').map(n => decodeURIComponent(n).toLowerCase())
+      pantryItems.forEach(i => { initial[i.id] = names.includes(i.name.toLowerCase()) })
+    } else {
+      pantryItems.forEach(i => { initial[i.id] = true })
     }
-    load()
-  }, [router, searchParams])
+    setSelected(initial)
+  }, [pantryItems, pantryLoading, searchParams])
 
   function toggleItem(id) {
     setSelected(prev => ({ ...prev, [id]: !prev[id] }))

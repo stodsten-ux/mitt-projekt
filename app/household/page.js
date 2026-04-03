@@ -1,19 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
 
 const inputStyle = { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '15px', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
 
 export default function HouseholdPage() {
-  const [user, setUser] = useState(null)
-  const [households, setHouseholds] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user, allMemberships, isLoading: loading, mutate } = useHousehold({ redirectTo: 'login' })
   const [view, setView] = useState('list')
   const [householdName, setHouseholdName] = useState('')
   const [adults, setAdults] = useState(2)
@@ -22,21 +21,6 @@ export default function HouseholdPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const router = useRouter()
-
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      setUser(user)
-      const { data: members } = await supabase
-        .from('household_members')
-        .select('household_id, role, households(id, name, display_name, adults, children, weekly_budget)')
-        .eq('user_id', user.id)
-      if (members) setHouseholds(members)
-      setLoading(false)
-    }
-    load()
-  }, [router])
 
   async function createHousehold() {
     setSaving(true)
@@ -49,6 +33,7 @@ export default function HouseholdPage() {
     if (hError) { setError(hError.message); setSaving(false); return }
     await supabase.from('household_members').insert({ household_id: household.id, user_id: user.id, role: 'admin' })
     await supabase.from('household_preferences').insert({ household_id: household.id, allergies: [], diet_preferences: [], favorite_foods: [], disliked_foods: [] })
+    await mutate()
     router.push(`/household/${household.id}`)
   }
 
@@ -59,9 +44,9 @@ export default function HouseholdPage() {
       <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--text)' }}>🏠 Mina hushåll</h1>
 
       {/* Lista befintliga hushåll */}
-      {households.length > 0 && (
+      {allMemberships.length > 0 && (
         <div style={{ marginBottom: '32px' }}>
-          {households.map((m) => (
+          {allMemberships.map((m) => (
             <Link
               key={m.household_id}
               href={`/household/${m.household_id}`}

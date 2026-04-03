@@ -7,34 +7,26 @@ import Link from 'next/link'
 import Spinner from '../components/Spinner'
 import { getFallbackImage } from '../lib/images'
 import { ChefHat, CalendarDays, ShoppingBag, AlertCircle, ChevronRight } from 'lucide-react'
+import { useHousehold } from '../lib/hooks/useHousehold'
 
 const supabase = createClient()
 
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
-  const [householdId, setHouseholdId] = useState(null)
+  const { user, householdId, isLoading: authLoading } = useHousehold()
+  const [dataLoading, setDataLoading] = useState(true)
   const [todayItem, setTodayItem] = useState(null)
   const [weekItems, setWeekItems] = useState([])
   const [shoppingList, setShoppingList] = useState(null)
   const [expiringItems, setExpiringItems] = useState([])
-  const router = useRouter()
+
+  const loading = authLoading || dataLoading
 
   useEffect(() => {
+    if (!householdId) return
+
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-      setUser(user)
-
-      const { data: members } = await supabase
-        .from('household_members')
-        .select('household_id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!members?.length) { router.push('/household'); return }
-      const hid = members[0].household_id
-      setHouseholdId(hid)
+      setDataLoading(true)
+      const hid = householdId
 
       const weekStart = getWeekStart()
       const { data: menu } = await supabase
@@ -84,10 +76,10 @@ export default function DashboardPage() {
         .limit(3)
       setExpiringItems(pantry || [])
 
-      setLoading(false)
+      setDataLoading(false)
     }
     load()
-  }, [router])
+  }, [householdId])
 
   if (loading) return (
     <div className="loading-screen-center">

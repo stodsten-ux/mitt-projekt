@@ -8,27 +8,24 @@ import Spinner from '../../components/Spinner'
 import { getFallbackImage } from '../../lib/images'
 import { ChefHat, ChevronRight, Sparkles, BookOpen } from 'lucide-react'
 import Image from 'next/image'
+import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
 
 export default function CookIndexPage() {
+  const { householdId, isLoading: authLoading } = useHousehold()
   const [recipes, setRecipes] = useState([])
   const [menuRecipes, setMenuRecipes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [dataLoading, setDataLoading] = useState(true)
+
+  const loading = authLoading || dataLoading
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
+    if (!householdId) return
 
-      const { data: members } = await supabase
-        .from('household_members')
-        .select('household_id')
-        .eq('user_id', user.id)
-        .limit(1)
-      if (!members?.length) { router.push('/household'); return }
-      const hid = members[0].household_id
+    async function load() {
+      setDataLoading(true)
+      const hid = householdId
 
       const weekStart = getWeekStart()
       const { data: menu } = await supabase
@@ -54,10 +51,10 @@ export default function CookIndexPage() {
         .order('id', { ascending: false })
         .limit(8)
       setRecipes(recent || [])
-      setLoading(false)
+      setDataLoading(false)
     }
     load()
-  }, [router])
+  }, [householdId])
 
   if (loading) return (
     <div className="loading-screen-center">
