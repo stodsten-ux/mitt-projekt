@@ -6,6 +6,9 @@ export default function PantrySkeleton() {
       {/* Title */}
       <Skeleton width="140px" height="28px" style={{ marginBottom: '28px' }} />
 
+      {/* Search bar */}
+      <Skeleton width="100%" height="44px" borderRadius="10px" style={{ marginBottom: '20px' }} />
+
       {/* Ingredient cards */}
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 16px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
