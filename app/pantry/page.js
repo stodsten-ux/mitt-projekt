@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import PantrySkeleton from '../../components/skeletons/PantrySkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 import { usePantry } from '../../lib/hooks/usePantry'
 
@@ -49,7 +50,7 @@ export default function PantryPage() {
     mutate()
   }
 
-  if (householdLoading || pantryLoading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (householdLoading || pantryLoading) return <PantrySkeleton />
 
   const expiringSoon = items.filter(i => { const d = daysUntilExpiry(i.expires_at); return d !== null && d <= 3 })
 
