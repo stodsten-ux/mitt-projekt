@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import HouseholdSkeleton from '../../components/skeletons/HouseholdSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
@@ -37,7 +38,7 @@ export default function HouseholdPage() {
     router.push(`/household/${household.id}`)
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (loading) return <HouseholdSkeleton />
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '32px 20px' }}>
