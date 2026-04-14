@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../../components/Spinner'
+import CookDetailSkeleton from '../../../components/skeletons/CookDetailSkeleton'
 
 const supabase = createClient()
 
@@ -287,11 +288,7 @@ export default function CookPage() {
     alert('Ingredienserna sparades i skafferiet!')
   }
 
-  if (loading) return (
-    <div className="loading-screen-center" style={{ height: '100vh' }}>
-      <Spinner />Förbereder recept...
-    </div>
-  )
+  if (loading) return <CookDetailSkeleton />
 
   // ---- KLAR-skärm med betyg ----
   if (done) {
