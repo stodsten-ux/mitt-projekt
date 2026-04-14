@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../../components/Spinner'
+import RecipeDetailSkeleton from '../../../components/skeletons/RecipeDetailSkeleton'
 
 const supabase = createClient()
 
@@ -81,7 +82,7 @@ export default function RecipeDetailPage() {
     router.push('/recipes')
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (loading) return <RecipeDetailSkeleton />
   if (!recipe) return null
 
   const baseServings = recipe.servings || 4
