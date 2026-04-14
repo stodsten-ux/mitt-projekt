@@ -346,10 +346,23 @@ h3 { font-size: 1.125rem; }
 [data-theme='dark'] .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-border) 25%,
-    var(--bg-card)      50%,
-    var(--color-border) 75%
+    var(--border)  25%,
+    var(--bg-card) 50%,
+    var(--border)  75%
   );
+  background-size: 200% 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--border)  25%,
+      var(--bg-card) 50%,
+      var(--border)  75%
+    );
+    background-size: 200% 100%;
+  }
 }
 
 /* ───────────────────────────────────────────
