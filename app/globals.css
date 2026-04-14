@@ -343,6 +343,15 @@ h3 { font-size: 1.125rem; }
   border-radius: 8px;
 }
 
+[data-theme='dark'] .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--bg-card)      50%,
+    var(--color-border) 75%
+  );
+}
+
 /* ───────────────────────────────────────────
    STAR RATING
 ─────────────────────────────────────────── */
