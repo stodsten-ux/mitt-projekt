@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Spinner from '../components/Spinner'
+import DashboardSkeleton from '../components/skeletons/DashboardSkeleton'
 import { getFallbackImage } from '../lib/images'
 import { ChefHat, CalendarDays, ShoppingBag, AlertCircle, ChevronRight } from 'lucide-react'
 import { useHousehold } from '../lib/hooks/useHousehold'
@@ -81,11 +81,7 @@ export default function DashboardPage() {
     load()
   }, [householdId])
 
-  if (loading) return (
-    <div className="loading-screen-center">
-      <Spinner />Laddar...
-    </div>
-  )
+  if (loading) return <DashboardSkeleton />
 
   const hour = new Date().getHours()
   const { greeting, heroGradient } = getGreeting(hour)
