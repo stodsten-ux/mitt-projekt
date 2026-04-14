@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../../components/Spinner'
+import HouseholdDetailSkeleton from '../../../components/skeletons/HouseholdDetailSkeleton'
 
 const supabase = createClient()
 
@@ -157,7 +158,7 @@ export default function HouseholdDetailPage() {
     setPreferences(prev => ({ ...prev, store_split: { ...(prev.store_split || {}), [store]: pct } }))
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (loading) return <HouseholdDetailSkeleton />
   if (!household) return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Hushållet hittades inte.</div>
 
   const tabs = ['overview', 'preferences', 'members']
