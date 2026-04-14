@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import ShoppingSkeleton from '../../components/skeletons/ShoppingSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 import { useShoppingLists, useShoppingItems } from '../../lib/hooks/useShoppingList'
 
@@ -184,7 +185,7 @@ export default function ShoppingPage() {
     }
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (loading) return <ShoppingSkeleton />
 
   const grouped = items.reduce((acc, item) => {
     const cat = item.store || 'Övrigt'
