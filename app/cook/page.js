@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Spinner from '../../components/Spinner'
+import CookSkeleton from '../../components/skeletons/CookSkeleton'
 import { getFallbackImage } from '../../lib/images'
 import { ChefHat, ChevronRight, Sparkles, BookOpen } from 'lucide-react'
 import Image from 'next/image'
@@ -56,11 +56,7 @@ export default function CookIndexPage() {
     load()
   }, [householdId])
 
-  if (loading) return (
-    <div className="loading-screen-center">
-      <Spinner />Laddar...
-    </div>
-  )
+  if (loading) return <CookSkeleton />
 
   const DAYS = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']
 
