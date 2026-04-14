@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Spinner from '../../components/Spinner'
+import RecipesSkeleton from '../../components/skeletons/RecipesSkeleton'
 import { getFallbackImage } from '../../lib/images'
 import { Search, Sparkles, BookOpen } from 'lucide-react'
 import Image from 'next/image'
@@ -97,7 +97,7 @@ export default function RecipesPage() {
     else alert('Kunde inte spara receptet.')
   }
 
-  if (loading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (loading) return <RecipesSkeleton />
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
