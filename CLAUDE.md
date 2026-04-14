@@ -40,3 +40,6 @@ git commit -m "beskrivning"
 git push origin main
 vercel --prod
 ```
+
+## Worktrees
+Worktree-katalog: `.worktrees/` (projektlokal, ignorerad av git)
