@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import MenuSkeleton from '../../components/skeletons/MenuSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 import { useMenu } from '../../lib/hooks/useMenu'
 
@@ -167,7 +168,7 @@ export default function MenuPage() {
 
   const hasItems = Object.keys(menuItems).length > 0
 
-  if (householdLoading) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (householdLoading) return <MenuSkeleton />
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
