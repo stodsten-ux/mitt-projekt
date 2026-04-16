@@ -105,16 +105,16 @@ export default function DashboardPage() {
         color: '#fff',
         marginBottom: '24px',
       }}>
-        <p style={{ fontSize: '13px', opacity: 0.75, marginBottom: '4px' }}>
+        <p className="t-eyebrow" style={{ color: 'rgba(255,255,255,0.65)', marginBottom: '6px' }}>
           {getDayName()} · vecka {getWeekNumber()}
         </p>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.9rem', fontWeight: '700', marginBottom: '20px', lineHeight: 1.2 }}>
+        <h1 className="t-display" style={{ color: '#fff', marginBottom: '20px' }}>
           {greeting} 👋
         </h1>
 
         {todayTitle ? (
           <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)', borderRadius: '14px', padding: '16px 18px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginBottom: '4px' }}>
+            <p className="t-display-italic" style={{ color: '#fff', fontSize: '18px', marginBottom: '8px' }}>
               Ikväll lagar vi
             </p>
             <p style={{ fontSize: '18px', fontWeight: '700', fontFamily: 'var(--font-heading)', marginBottom: '12px' }}>{todayTitle}</p>
@@ -188,13 +188,13 @@ export default function DashboardPage() {
           <div>
             {shoppingList ? (
               <>
-                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{shoppingList.count} varor</p>
+                <p className="t-body-medium">{shoppingList.count} varor</p>
                 {shoppingList.estimatedCost > 0 && (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Est. {shoppingList.estimatedCost} kr</p>
+                  <p className="t-muted">Est. {shoppingList.estimatedCost} kr</p>
                 )}
               </>
             ) : (
-              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ingen aktiv inköpslista</p>
+              <p className="t-muted">Ingen aktiv inköpslista</p>
             )}
           </div>
           <Link href="/shopping" className="btn-secondary" style={{ fontSize: '13px', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
@@ -209,8 +209,8 @@ export default function DashboardPage() {
           <p className="section-label">Skafferiet — går ut snart</p>
           <div className="card" style={{ padding: '16px 20px' }}>
             {expiringItems.map((item, i) => (
-              <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: '4px' }}>
-                ⚠️ {item.name} — {formatExpiry(item.expires_at)}
+              <p key={i} style={{ fontSize: '14px', color: 'var(--warning)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertCircle size={14} /> {item.name} — {formatExpiry(item.expires_at)}
               </p>
             ))}
             <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>

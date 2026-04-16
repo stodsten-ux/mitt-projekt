@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Pencil, Sparkles, ShoppingCart, Zap } from 'lucide-react'
 import Spinner from '../../components/Spinner'
 import MenuSkeleton from '../../components/skeletons/MenuSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
@@ -166,18 +167,19 @@ export default function MenuPage() {
     await saveMenu(newItems)
   }
 
+  const todayDow = new Date().getDay() === 0 ? 7 : new Date().getDay()
   const hasItems = Object.keys(menuItems).length > 0
 
   if (householdLoading) return <MenuSkeleton />
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--text)' }}>📅 Veckomenyn</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--color-forest)', fontFamily: 'var(--font-heading)' }}>Veckomenyn</h1>
 
       {/* Veckonavigering */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px' }}>
         <button onClick={() => changeWeek(-1)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '16px', color: 'var(--text)' }}>←</button>
-        <span style={{ fontWeight: '600', color: 'var(--text)' }}>{formatWeekLabel(weekStart)}</span>
+        <span style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: '700', color: 'var(--color-forest)', letterSpacing: '-0.01em' }}>{formatWeekLabel(weekStart)}</span>
         <button onClick={() => changeWeek(1)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '16px', color: 'var(--text)' }}>→</button>
       </div>
 
@@ -189,8 +191,12 @@ export default function MenuPage() {
           const recipeId = menuRecipeIds[dayNum]
           const isEditing = editingDay === dayNum
           return (
-            <div key={dayNum} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '8px' }}>
-              <span style={{ width: '76px', fontWeight: '500', fontSize: '14px', color: 'var(--text-muted)', flexShrink: 0 }}>{day}</span>
+            <div
+              key={dayNum}
+              className={`drow${title ? ' filled' : ''}${todayDow === dayNum ? ' today' : ''}`}
+              style={{ marginBottom: '5px' }}
+            >
+              <span className="drow-day">{day}</span>
               {isEditing ? (
                 <input
                   autoFocus
@@ -203,26 +209,21 @@ export default function MenuPage() {
                   style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--accent)', fontSize: '14px', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
                 />
               ) : recipeId ? (
-                // Recept finns — visa klickbar länk + redigeringsknapp
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Link
-                    href={`/recipes/${recipeId}`}
-                    style={{ fontSize: '14px', color: 'var(--text)', textDecoration: 'none', fontWeight: '500', flex: 1, padding: '6px 0' }}
-                  >
+                  <Link href={`/recipes/${recipeId}`} className="drow-title" style={{ textDecoration: 'none' }}>
                     {title}
                   </Link>
-                  <button
-                    onClick={() => startEdit(dayNum)}
-                    title="Redigera"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
-                  >
-                    ✏️
+                  <button onClick={() => startEdit(dayNum)} title="Redigera" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>
+                    <Pencil size={13} />
                   </button>
                 </div>
               ) : (
-                <span onClick={() => startEdit(dayNum)} style={{ flex: 1, fontSize: '14px', color: title ? 'var(--text)' : 'var(--border)', cursor: 'pointer', padding: '6px 0' }}>
+                <span onClick={() => startEdit(dayNum)} className={title ? 'drow-title' : 'drow-empty'}>
                   {title || 'Klicka för att lägga till...'}
                 </span>
+              )}
+              {todayDow === dayNum && title && !isEditing && (
+                <span className="pill pill-today">Idag</span>
               )}
               {title && !isEditing && (
                 <button onClick={() => { const n = { ...menuItems }; delete n[dayNum]; const r = { ...menuRecipeIds }; delete r[dayNum]; setLocalMenuItems(n); setLocalRecipeIds(r); saveMenu({ ...menuItems, [dayNum]: undefined }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border)', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
@@ -241,31 +242,48 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* Knappar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* AI suggestion card */}
+      <div className="ai-card" onClick={getAiSuggestion} style={{ marginBottom: '20px', opacity: (aiLoading || expandLoading) ? 0.6 : 1, pointerEvents: (aiLoading || expandLoading) ? 'none' : 'auto' }}>
+        <div className="ai-card-icon">
+          <Sparkles size={18} />
+        </div>
+        <div className="ai-card-text">
+          <p className="ai-card-title">
+            {(aiLoading || expandLoading)
+              ? (expandLoading ? 'Genererar recept...' : 'Hämtar AI-förslag...')
+              : 'Föreslå hela veckan med AI'}
+          </p>
+          <p className="ai-card-sub">Anpassas efter skafferi, budget och preferenser</p>
+        </div>
+        <span className="ai-card-arrow">→</span>
+      </div>
+
+      {/* Åtgärdsrader */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         <button
-          onClick={getAiSuggestion}
-          disabled={aiLoading || expandLoading}
-          style={{ padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}
+          className="btn-action"
+          onClick={generateShoppingList}
+          disabled={shoppingLoading || !hasItems}
         >
-          {(aiLoading || expandLoading) ? <><Spinner />&nbsp;{expandLoading ? 'Genererar recept...' : 'Hämtar AI-förslag...'}</> : '✨ AI-förslag på hela veckan'}
+          <span className="btn-action-label">
+            <ShoppingCart size={16} className="btn-action-icon" />
+            {shoppingLoading ? 'Genererar inköpslista...' : 'Generera inköpslista'}
+          </span>
+          <span className="btn-action-arrow">›</span>
         </button>
         {hasItems && (
           <button
+            className="btn-action"
             onClick={expandMenu}
             disabled={expandLoading || !menuId}
-            style={{ padding: '14px', background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '500' }}
           >
-            {expandLoading ? <><Spinner />&nbsp;{expandStatus || 'Genererar ingredienser...'}</> : '⚡ Generera ingredienser för hela veckan'}
+            <span className="btn-action-label">
+              <Zap size={16} className="btn-action-icon" />
+              {expandLoading ? 'Genererar ingredienser...' : 'Generera ingredienser'}
+            </span>
+            <span className="btn-action-arrow">›</span>
           </button>
         )}
-        <button
-          onClick={generateShoppingList}
-          disabled={shoppingLoading || !hasItems}
-          style={{ padding: '14px', background: 'var(--bg-card)', color: hasItems ? 'var(--text)' : 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '10px', cursor: hasItems ? 'pointer' : 'default', fontSize: '15px', fontWeight: '500' }}
-        >
-          {shoppingLoading ? <><Spinner />&nbsp;Genererar inköpslista...</> : '🛍️ Generera inköpslista från menyn'}
-        </button>
       </div>
     </div>
   )
