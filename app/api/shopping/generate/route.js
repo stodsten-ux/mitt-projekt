@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withHouseholdContext } from '../../../lib/prompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -43,7 +44,7 @@ async function getIngredientsFromAI(dishes, householdContext) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
-    system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${householdContext}`,
+    system: withHouseholdContext(householdContext),
     messages: [{
       role: 'user',
       content: `Ge mig en samlad ingredienslista för att laga dessa rätter: ${dishList}.

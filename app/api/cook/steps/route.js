@@ -36,8 +36,8 @@ export async function POST(request) {
 
     // Parsea instruktioner till strukturerade steg via Claude
     const message = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 2000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
       system: 'Du är en matlagningsassistent. Dela upp instruktioner i tydliga, korta steg. Svara alltid på svenska.',
       messages: [{
         role: 'user',

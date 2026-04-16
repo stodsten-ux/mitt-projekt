@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getISOWeek } from '../../lib/dates'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -98,29 +99,15 @@ Inkludera ett "campaign" fält med kampanjinfo om du känner till något, annars
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4000,
+    max_tokens: 2000,
     system: 'Du är en hjälpsam assistent med kunskap om svenska matpriser och butikskedjornas kampanjmönster. Svara alltid på svenska. Ge alltid rimliga uppskattningar baserade på din träningsdata om svenska livsmedelspriser.',
     messages: [{
       role: 'user',
-      content: `Uppskatta ungefärliga priser för följande matvaror i svenska butiker (${storeListStr}):
+      content: `Uppskatta priser för dessa matvaror i svenska butiker (${storeListStr}):
 ${items.map((item, i) => `${i + 1}. ${item}`).join('\n')}
 ${campaignSection}
-
-Returnera ENDAST detta JSON-objekt utan förklaringar eller markdown:
-{
-  "items": [
-    {
-      "name": "Kycklingfilé",
-      "bestPrice": "ca 45 kr/kg",
-      "numericPrice": 45.00,
-      "unit": "kg",
-      "store": "Willys",
-      "tip": "Köp hel kyckling och stycka själv",
-      "campaign": "Ofta på rea hos ICA varannan vecka"
-    }
-  ],
-  "weeklyTip": "Handla torrvaror på Lidl och kött på Willys för bäst pris denna veckan."
-}`,
+Returnera ENDAST JSON utan markdown:
+{"items":[{"name":"","bestPrice":"ca X kr/kg","numericPrice":0,"unit":"","store":"","tip":"","campaign":null}],"weeklyTip":""}`,
     }],
   })
 
@@ -139,10 +126,3 @@ Returnera ENDAST detta JSON-objekt utan förklaringar eller markdown:
   }
 }
 
-function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
-}

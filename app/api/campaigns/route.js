@@ -1,16 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getISOWeek } from '../../lib/dates'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
-}
 
 export async function POST(request) {
   try {
@@ -48,45 +41,16 @@ export async function POST(request) {
     console.time('campaigns-ai')
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 2000,
       system: `Du är en expert på svenska butikskedjors kampanjmönster och erbjudanden.
 Du känner till typiska kampanjcykler för ICA, Willys, Coop, Lidl, Hemköp, Citygross och Netto.
 Svara alltid på svenska. Ge konkreta och rimliga uppskattningar baserade på historiska mönster.`,
       messages: [{
         role: 'user',
-        content: `Vilka kampanjer och erbjudanden kan man förvänta sig hos dessa butiker under ${weekLabel}: ${storeList.join(', ')}?${itemSection}
-
-Inkludera även:
-1. Vilka varor brukar vara på rea denna vecka på året (säsong, högtider etc.)
-2. Om någon av de specifika varorna ovan brukar vara billigare en annan vecka — rekommendera när man bör köpa
-3. Generella inköpstips för veckan
-
-Returnera ENDAST detta JSON utan markdown:
-{
-  "weekLabel": "${weekLabel}",
-  "campaigns": [
-    {
-      "store": "ICA",
-      "item": "Kycklingfilé",
-      "campaignPrice": "ca 45 kr/kg",
-      "regularPrice": "ca 85 kr/kg",
-      "savings": "ca 40 kr/kg",
-      "period": "${weekLabel}",
-      "confidence": "hög"
-    }
-  ],
-  "recommendations": [
-    {
-      "item": "Kaffe",
-      "action": "Köp nu",
-      "reason": "Brukar vara på extrapris hos ICA varannan vecka, nästa tillfälle troligen om 2 veckor",
-      "bestStore": "ICA",
-      "urgency": "hög"
-    }
-  ],
-  "seasonalTips": "Påskvecka — bra priser på ägg, lax och choklad hos de flesta butiker.",
-  "disclaimer": "Kampanjerna är uppskattningar baserade på historiska mönster och kan avvika från faktiska priser."
-}`,
+        content: `Kampanjer/erbjudanden hos ${storeList.join(', ')} under ${weekLabel}.${itemSection}
+Inkludera: säsongsvaror på rea, rekommendationer om när specifika varor är billigast, generella inköpstips.
+Returnera ENDAST JSON utan markdown:
+{"weekLabel":"${weekLabel}","campaigns":[{"store":"","item":"","campaignPrice":"","regularPrice":"","savings":"","confidence":"hög|medel|låg"}],"recommendations":[{"item":"","action":"Köp nu|Vänta","reason":"","bestStore":"","urgency":"hög|medel|låg"}],"seasonalTips":"","disclaimer":"Uppskattningar baserade på historiska mönster."}`,
       }],
     })
 

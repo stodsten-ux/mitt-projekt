@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withHouseholdContext } from '../../../lib/prompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -49,7 +50,7 @@ export async function POST(request) {
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${contextLines}`,
+        system: withHouseholdContext(contextLines),
         messages: [{
           role: 'user',
           content: `Generera ett komplett recept för "${item.custom_title}".

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withHouseholdContext } from '../../lib/prompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -57,9 +58,9 @@ ${prefs?.disliked_foods?.length ? `Undviker: ${prefs.disliked_foods.join(', ')}.
 
     // 4. Fråga AI
     const message = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
-      system: `Du är en matplaneringsassistent. Svara alltid på svenska. ${householdContext}`,
+      system: withHouseholdContext(householdContext),
       messages: [{
         role: 'user',
         content: `Skapa ett recept för: ${query}. Returnera som JSON med fälten: title, description, servings (number), ingredients (array av {name, quantity}), instructions (string). Returnera BARA JSON.`
