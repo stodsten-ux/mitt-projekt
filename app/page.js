@@ -8,11 +8,13 @@ import DashboardSkeleton from '../components/skeletons/DashboardSkeleton'
 import { getFallbackImage } from '../lib/images'
 import { ChefHat, CalendarDays, ShoppingBag, AlertCircle, ChevronRight } from 'lucide-react'
 import { useHousehold } from '../lib/hooks/useHousehold'
+import Landing from '../components/Landing'
 
 const supabase = createClient()
 
 export default function DashboardPage() {
-  const { user, householdId, isLoading: authLoading } = useHousehold()
+  const { user, householdId, isLoading: authLoading } = useHousehold({ redirectTo: 'none' })
+  const router = useRouter()
   const [dataLoading, setDataLoading] = useState(true)
   const [todayItem, setTodayItem] = useState(null)
   const [weekItems, setWeekItems] = useState([])
@@ -20,6 +22,11 @@ export default function DashboardPage() {
   const [expiringItems, setExpiringItems] = useState([])
 
   const loading = authLoading || dataLoading
+
+  useEffect(() => {
+    if (authLoading) return
+    if (user && !householdId) router.push('/onboarding')
+  }, [user, householdId, authLoading, router])
 
   useEffect(() => {
     if (!householdId) return
@@ -80,6 +87,9 @@ export default function DashboardPage() {
     }
     load()
   }, [householdId])
+
+  if (!authLoading && !user) return <Landing />
+  if (!authLoading && user && !householdId) return null
 
   if (loading) return <DashboardSkeleton />
 

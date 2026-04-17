@@ -13,6 +13,7 @@ export default function Navbar() {
   const router = useRouter()
   const [household, setHousehold] = useState(null)
   const [householdId, setHouseholdId] = useState(null)
+  const [currentUser, setCurrentUser] = useState(undefined) // undefined = laddar, null = ej inloggad
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
 
@@ -22,6 +23,7 @@ export default function Navbar() {
     if (hide) return
     async function loadHousehold() {
       const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUser(user)
       if (!user) return
       const { data: members } = await supabase
         .from('household_members')
@@ -56,6 +58,38 @@ export default function Navbar() {
   }, [])
 
   if (hide) return null
+
+  // Visa landing-navbar när ingen user är inloggad
+  if (currentUser === null) {
+    return (
+      <nav style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0,
+        height: '56px',
+        background: 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 20px',
+        zIndex: 100,
+      }}>
+        <Link href="/" style={{ textDecoration: 'none', color: 'var(--color-forest)', fontWeight: '700', fontSize: '16px', fontFamily: 'var(--font-heading)' }}>
+          Mathandel
+        </Link>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <Link href="/auth/login" style={{ fontSize: '14px', color: 'var(--text-muted)', textDecoration: 'none', fontWeight: '500' }}>
+            Logga in
+          </Link>
+          <Link href="/auth/register" style={{ fontSize: '14px', fontWeight: '600', color: '#fff', background: 'var(--color-terracotta)', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none' }}>
+            Kom igång
+          </Link>
+        </div>
+      </nav>
+    )
+  }
+
+  // currentUser === undefined: laddar fortfarande — visa ingenting (undviker flash)
+  if (currentUser === undefined) return null
 
   async function handleLogout() {
     await supabase.auth.signOut()
