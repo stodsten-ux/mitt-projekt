@@ -1,11 +1,17 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getISOWeek, getWeekSunday } from '../../lib/dates'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null
+
 export async function POST(request) {
+  let weekLabel = ''
   try {
     const { stores, items, householdId, weekOffset = 0 } = await request.json()
 
@@ -33,7 +39,7 @@ export async function POST(request) {
     targetDate.setDate(targetDate.getDate() + weekOffset * 7)
     const weekNum = getISOWeek(targetDate)
     const year = targetDate.getFullYear()
-    const weekLabel = `vecka ${weekNum} ${year}`
+    weekLabel = `vecka ${weekNum} ${year}`
     const validUntil = getWeekSunday(targetDate)
 
     // 1. Kontrollera cache per butik (parallellt)
@@ -116,15 +122,19 @@ Returnera ENDAST JSON utan markdown:
           aiPayloads[store] = { ...storePayload, source: 'ai' }
 
           // Spara i cache (blockerar inte svaret vid fel)
-          supabase
-            .from('campaign_cache')
-            .upsert(
-              { store, week_number: weekNum, year, payload: storePayload, valid_until: validUntil },
-              { onConflict: 'store,week_number,year' }
-            )
-            .then(({ error }) => {
-              if (error) console.error(`campaign_cache upsert misslyckades för ${store}:`, error)
-            })
+          if (supabaseAdmin) {
+            supabaseAdmin
+              .from('campaign_cache')
+              .upsert(
+                { store, week_number: weekNum, year, payload: storePayload, valid_until: validUntil },
+                { onConflict: 'store,week_number,year' }
+              )
+              .then(({ error }) => {
+                if (error) console.error(`campaign_cache upsert misslyckades för ${store}:`, error)
+              })
+          } else {
+            console.warn('campaign_cache: SUPABASE_SERVICE_ROLE_KEY saknas, cache-write hoppas över')
+          }
         }
       } else {
         uncachedStores.forEach(s => { if (!warnings.includes(s)) warnings.push(s) })
@@ -188,7 +198,7 @@ Returnera ENDAST JSON utan markdown:
     console.error('campaigns error:', error)
     return Response.json({
       success: true,
-      weekLabel: '',
+      weekLabel,
       campaigns: [],
       recommendations: [],
       seasonalTips: 'Kampanjinformation är inte tillgänglig just nu.',
