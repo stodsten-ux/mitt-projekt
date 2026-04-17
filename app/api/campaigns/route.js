@@ -186,6 +186,14 @@ Returnera ENDAST JSON utan markdown:
     })
   } catch (error) {
     console.error('campaigns error:', error)
-    return Response.json({ error: error.message }, { status: 500 })
+    return Response.json({
+      success: true,
+      weekLabel: '',
+      campaigns: [],
+      recommendations: [],
+      seasonalTips: 'Kampanjinformation är inte tillgänglig just nu.',
+      disclaimer: '',
+      source: 'none',
+    })
   }
 }
