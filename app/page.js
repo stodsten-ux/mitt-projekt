@@ -15,7 +15,7 @@ const supabase = createClient()
 export default function DashboardPage() {
   const { user, householdId, isLoading: authLoading } = useHousehold({ redirectTo: 'none' })
   const router = useRouter()
-  const [dataLoading, setDataLoading] = useState(true)
+  const [dataLoading, setDataLoading] = useState(false)
   const [todayItem, setTodayItem] = useState(null)
   const [weekItems, setWeekItems] = useState([])
   const [shoppingList, setShoppingList] = useState(null)
@@ -89,7 +89,7 @@ export default function DashboardPage() {
   }, [householdId])
 
   if (!authLoading && !user) return <Landing />
-  if (!authLoading && user && !householdId) return null
+  if (!authLoading && user && !householdId) return <DashboardSkeleton />
 
   if (loading) return <DashboardSkeleton />
 
