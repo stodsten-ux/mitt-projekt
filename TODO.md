@@ -52,7 +52,7 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 10. [x] SWR för stale-while-revalidate på hushållsdata, menyer, skafferi
 
 #### P4 — Caching lager 2
-11. [ ] Cache kampanjsvar i Supabase (campaign_cache, TTL 24h) — kampanjer ändras inte per minut
+11. [x] Cache kampanjsvar i Supabase (campaign_cache, valid_until=veckoslutet) — kampanjer ändras inte per vecka
 12. [ ] Trimma system-prompts — kortare prompt = snabbare TTFT
 
 #### P5 — Senare (inte nu)
