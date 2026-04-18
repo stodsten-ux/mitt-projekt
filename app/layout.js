@@ -3,7 +3,6 @@ import './components.css'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from '../components/Navbar'
-import ModeSelector from '../components/ModeSelector'
 import CookieBanner from '../components/CookieBanner'
 import SWRProvider from './swr-provider'
 
@@ -39,9 +38,8 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body style={{ paddingTop: '104px' }}>
+      <body style={{ paddingTop: '56px' }}>
         <Navbar />
-        <ModeSelector />
         <SWRProvider>{children}</SWRProvider>
         <CookieBanner />
         <Analytics />
