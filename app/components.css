@@ -501,7 +501,7 @@
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: var(--radius-card);
   border: 1px solid rgba(45,74,62,0.08);
   box-shadow: var(--shadow-sm);
@@ -535,19 +535,19 @@
 .step-title {
   font-size: 14px;
   font-weight: 700;
-  color: #0F1A14;
+  color: var(--text);
   letter-spacing: -0.02em;
   margin-bottom: 3px;
 }
 
 .step-sub {
   font-size: 12px;
-  color: #7C9A82;
+  color: var(--color-sage);
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-.step-sub.urgent { color: #C4622D; }
+.step-sub.urgent { color: var(--color-terracotta); }
 
 .step-arrow {
   color: rgba(0,0,0,0.2);
@@ -666,7 +666,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #C4622D;
+  background: var(--color-terracotta);
   flex-shrink: 0;
   box-shadow: 0 0 0 3px rgba(196,98,45,0.15);
 }
@@ -676,13 +676,13 @@
 .alert-title {
   font-size: 12px;
   font-weight: 600;
-  color: #C4622D;
+  color: var(--color-terracotta);
   letter-spacing: -0.01em;
 }
 
 .alert-sub {
   font-size: 11px;
-  color: #8B6914;
+  color: var(--color-soil);
   margin-top: 1px;
   font-weight: 400;
 }
@@ -701,7 +701,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #2D4A3E;
+  color: var(--color-forest);
   cursor: pointer;
   border: none;
   letter-spacing: -0.01em;
@@ -721,7 +721,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #2D4A3E;
+  color: var(--color-forest);
   text-decoration: none;
   transition: background 0.15s ease;
   flex-shrink: 0;
@@ -746,3 +746,13 @@
 .slide-up-6 { animation: slideUp 0.50s cubic-bezier(.25,.46,.45,.94) 0.50s both; }
 .slide-up-7 { animation: slideUp 0.50s cubic-bezier(.25,.46,.45,.94) 0.58s both; }
 .slide-up-8 { animation: slideUp 0.50s cubic-bezier(.25,.46,.45,.94) 0.64s both; }
+
+/* Reduced-motion: hold final state immediately, skip animation */
+@media (prefers-reduced-motion: reduce) {
+  .slide-up-1, .slide-up-2, .slide-up-3, .slide-up-4,
+  .slide-up-5, .slide-up-6, .slide-up-7, .slide-up-8 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
