@@ -53,7 +53,7 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 
 #### P4 — Caching lager 2
 11. [x] Cache kampanjsvar i Supabase (campaign_cache, valid_until=veckoslutet) — kampanjer ändras inte per vecka
-12. [ ] Trimma system-prompts — kortare prompt = snabbare TTFT
+12. [x] Trimma system-prompts — kortare prompt = snabbare TTFT
 
 #### P5 — Senare (inte nu)
 13. [ ] Aktivera invite/[token]/page.js — hushållsinbjudningar

@@ -63,11 +63,8 @@ export async function POST(request) {
       }
     }
 
-    const systemPrompt = `Du är en hjälpsam matplaneringsassistent.
-Du hjälper familjer att planera veckomeny, hitta recept och skapa inköpslistor.
-Svara alltid på svenska.
-När du föreslår recept, inkludera alltid ingredienser med mängder och enkla instruktioner.
-När du föreslår inköpslistor, gruppera varor per butikskategori.
+    const systemPrompt = `Du är en matplaneringsassistent. Svara alltid på svenska.
+Recept: inkludera ingredienser med mängder och instruktioner. Inköpslistor: gruppera per butikskategori.
 ${householdContext}`
 
     if (useStream) {

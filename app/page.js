@@ -86,7 +86,6 @@ export default function DashboardPage() {
   const hour = new Date().getHours()
   const { greeting, heroGradient } = getGreeting(hour)
 
-  const DAYS = ['', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
   const todayDow = getTodayDayOfWeek()
 
   const todayTitle = todayItem?.recipes?.title || todayItem?.custom_title
@@ -151,35 +150,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Denna vecka ── */}
-      <div style={{ marginBottom: '20px' }}>
-        <p className="section-label">Denna vecka</p>
-        <div className="card" style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
-            {[1,2,3,4,5,6,7].map(dow => {
-              const item = weekItems.find(i => i.day_of_week === dow)
-              const hasRecipe = item?.recipe_id != null
-              const isToday = dow === todayDow
-              return (
-                <div key={dow} style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: '7px 2px',
-                  borderRadius: '8px',
-                  background: isToday ? 'var(--color-forest)' : 'var(--bg)',
-                  border: '1px solid var(--border)',
-                }}>
-                  <p style={{ fontSize: '10px', fontWeight: '600', color: isToday ? '#fff' : 'var(--text-muted)', marginBottom: '3px' }}>{DAYS[dow]}</p>
-                  <p style={{ fontSize: '13px' }}>{hasRecipe ? '✅' : '➕'}</p>
-                </div>
-              )
-            })}
-          </div>
-          <Link href="/menu" style={{ textDecoration: 'none', color: 'var(--accent)', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <CalendarDays size={13} /> Planera veckan
-          </Link>
-        </div>
-      </div>
 
       {/* ── Inköpslista ── */}
       <div style={{ marginBottom: '20px' }}>

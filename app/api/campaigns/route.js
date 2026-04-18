@@ -82,9 +82,7 @@ export async function POST(request) {
         const message = await client.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 2000,
-          system: `Du är en expert på svenska butikskedjors kampanjmönster och erbjudanden.
-Du känner till typiska kampanjcykler för ICA, Willys, Coop, Lidl, Hemköp, Citygross och Netto.
-Svara alltid på svenska. Ge konkreta och rimliga uppskattningar baserade på historiska mönster.`,
+          system: 'Du är expert på svenska butikskedjors kampanjmönster (ICA, Willys, Coop, Lidl, Hemköp, Citygross, Netto). Svara på svenska med konkreta uppskattningar baserade på historiska mönster.',
           messages: [{
             role: 'user',
             content: `Kampanjer/erbjudanden hos ${uncachedStores.join(', ')} under ${weekLabel}.${itemSection}

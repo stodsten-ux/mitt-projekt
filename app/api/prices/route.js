@@ -100,7 +100,7 @@ Inkludera ett "campaign" fält med kampanjinfo om du känner till något, annars
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
-    system: 'Du är en hjälpsam assistent med kunskap om svenska matpriser och butikskedjornas kampanjmönster. Svara alltid på svenska. Ge alltid rimliga uppskattningar baserade på din träningsdata om svenska livsmedelspriser.',
+    system: 'Du är expert på svenska matpriser och butikskedjornas kampanjmönster. Svara på svenska med rimliga uppskattningar.',
     messages: [{
       role: 'user',
       content: `Uppskatta priser för dessa matvaror i svenska butiker (${storeListStr}):

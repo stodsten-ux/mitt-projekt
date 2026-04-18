@@ -38,7 +38,7 @@ export async function POST(request) {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      system: 'Du är en matlagningsassistent. Dela upp instruktioner i tydliga, korta steg. Svara alltid på svenska.',
+      system: 'Du är en matlagningsassistent. Svara på svenska. Dela upp instruktioner i korta, konkreta steg med timer där det behövs.',
       messages: [{
         role: 'user',
         content: `Dela upp dessa instruktioner för "${recipe.title}" i separata steg.
