@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../../components/Spinner'
 import CookDetailSkeleton from '../../../components/skeletons/CookDetailSkeleton'
+import NextStepBanner from '../../../components/NextStepBanner'
 
 const supabase = createClient()
 
@@ -333,6 +334,14 @@ export default function CookPage() {
               ← Tillbaka till receptet
             </Link>
           </div>
+        )}
+
+        {ratedDone && (
+          <NextStepBanner
+            text="Klart för idag!"
+            cta="Tillbaka till start"
+            href="/"
+          />
         )}
       </div>
     )

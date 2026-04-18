@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Pencil, Sparkles, ShoppingCart, Zap } from 'lucide-react'
 import Spinner from '../../components/Spinner'
 import MenuSkeleton from '../../components/skeletons/MenuSkeleton'
+import NextStepBanner from '../../components/NextStepBanner'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 import { useMenu } from '../../lib/hooks/useMenu'
 
@@ -285,6 +286,15 @@ export default function MenuPage() {
           </button>
         )}
       </div>
+
+      {/* Visa "nästa steg"-banner när menyn har minst en rätt */}
+      {hasItems && (
+        <NextStepBanner
+          text="Menyn är klar"
+          cta="Skapa inköpslistan"
+          href="/shopping"
+        />
+      )}
     </div>
   )
 }

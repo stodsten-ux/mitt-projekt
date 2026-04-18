@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { CalendarDays, ShoppingBag, ChefHat } from 'lucide-react'
+import { CalendarDays, ShoppingBag, ChefHat, Home } from 'lucide-react'
 
 const MODES = [
   { label: 'Planera', icon: CalendarDays, href: '/menu', paths: ['/menu', '/recipes', '/pantry'] },
@@ -94,7 +94,7 @@ export default function ModeSelector() {
           href="/"
           className={`bottom-nav-item${pathname === '/' ? ' active' : ''}`}
         >
-          <span className="icon">🏠</span>
+          <Home size={22} className="icon" />
           Hem
         </Link>
       </nav>
