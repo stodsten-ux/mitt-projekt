@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
 import ShoppingSkeleton from '../../components/skeletons/ShoppingSkeleton'
+import NextStepBanner from '../../components/NextStepBanner'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 import { useShoppingLists, useShoppingItems } from '../../lib/hooks/useShoppingList'
 
@@ -24,6 +25,7 @@ export default function ShoppingPage() {
 
   const { items, isLoading: itemsLoading, mutate: mutateItems } = useShoppingItems(effectiveActiveListId)
 
+  const allChecked = items.length > 0 && items.every(item => item.checked)
   const weeklyBudget = householdData?.weekly_budget ?? null
   const [preferredStores, setPreferredStores] = useState([])
 
@@ -428,6 +430,14 @@ export default function ShoppingPage() {
             </button>
           </div>
         </>
+      )}
+
+      {allChecked && (
+        <NextStepBanner
+          text="Klart! Alla varor är bockade"
+          cta="Dags att laga"
+          href="/cook"
+        />
       )}
     </div>
   )
