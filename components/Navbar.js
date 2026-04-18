@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '../lib/supabase'
-import { Home, Settings, ChevronDown, LogOut, RefreshCw, User } from 'lucide-react'
+import { Home, Settings, ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 
 const supabase = createClient()
 
