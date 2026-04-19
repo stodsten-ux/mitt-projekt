@@ -18,9 +18,9 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 
 **Återstår:**
 - [x] Task 5 — Tillbaka-knappar: `menu/page.js`, `shopping/page.js`, `cook/[recipeId]/page.js`, `pantry/page.js`
-- [ ] Task 6 — Bygga + driftsätta: `npm run build` → verifiera ikoner → `vercel --prod`
+- [x] Task 6 — Bygga + driftsätta: `npm run build` → verifiera ikoner → `vercel --prod`
 
-**Vad är nästa steg?** → Kör Task 5 (tillbaka-knappar på undersidor).
+**Vad är nästa steg?** → UI-redesign klar och driftsatt. Nästa: P3 skeleton screens (TODO rad 72) eller P5-backlog.
 
 ---
 
