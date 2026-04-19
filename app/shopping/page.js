@@ -200,8 +200,9 @@ export default function ShoppingPage() {
   const checkedCount = items.filter(i => i.checked).length
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '28px', color: 'var(--text)' }}>🛍️ Inköpslista</h1>
+    <div className="page animate-fade-in">
+      <Link href="/" className="btn-ghost" style={{ marginBottom: '20px' }}>← Tillbaka</Link>
+      <h1 className="t-heading" style={{ marginBottom: '24px' }}>Inköpslista</h1>
 
       {/* Listväljare */}
       {lists.length > 1 && (

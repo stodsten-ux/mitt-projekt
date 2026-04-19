@@ -174,8 +174,9 @@ export default function MenuPage() {
   if (householdLoading) return <MenuSkeleton />
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--color-forest)', fontFamily: 'var(--font-heading)' }}>Veckomenyn</h1>
+    <div className="page animate-fade-in">
+      <Link href="/" className="btn-ghost" style={{ marginBottom: '20px' }}>← Tillbaka</Link>
+      <h1 className="t-heading" style={{ marginBottom: '24px' }}>Veckomenyn</h1>
 
       {/* Veckonavigering */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px' }}>

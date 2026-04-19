@@ -8,19 +8,19 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 ### UI-redesign (Apple-inspirerat formspråk)
 **Plan:** `docs/superpowers/plans/2026-04-18-ui-redesign.md`
 **Spec:** `docs/superpowers/specs/2026-04-18-ui-redesign-design.md`
-**Dialog:** `.claude/projects/-Users-jonashallgren-Projekt-mathandelsagenten/0327091d-15ac-42e7-9ca0-1831af80c085.jsonl`
+**Dialog:** `.claude/projects/-Users-jonashallgren-Projekt-mathandelsagenten/c91eac3c-ca08-4d21-b7ac-5d45b51c2d61.jsonl`
 
 **Klart:**
 - [x] Task 1 — CSS-foundation: shadow-system, radius-card 18px, alla dashboard-komponentklasser i components.css
 - [x] Task 2 — Layout chrome: ModeSelector borttagen, paddingTop 104px → 56px
 - [x] Task 3 — Navbar: frosted glass, ingen emoji, nav-pill + nav-icon-btn
+- [x] Task 4 — Dashboard (`app/page.js`): dashboard-hero + tonight-card + step-card × 2 + cta-card + alert-card. Bild-hero borttagen, inline styles borttagna, build OK.
 
-**Återstår (kör subagent-driven-development):**
-- [ ] Task 4 — Dashboard (`app/page.js`): hero + steg-kort + CTA-kort, ersätt hela filen
-- [ ] Task 5 — Tillbaka-knappar: `menu/page.js`, `shopping/page.js`, `cook/[recipeId]/page.js`, `pantry/page.js`
+**Återstår:**
+- [x] Task 5 — Tillbaka-knappar: `menu/page.js`, `shopping/page.js`, `cook/[recipeId]/page.js`, `pantry/page.js`
 - [ ] Task 6 — Bygga + driftsätta: `npm run build` → verifiera ikoner → `vercel --prod`
 
-**Vad är nästa steg?** → Kör Task 4 (dispatch implementer för `app/page.js`).
+**Vad är nästa steg?** → Kör Task 5 (tillbaka-knappar på undersidor).
 
 ---
 

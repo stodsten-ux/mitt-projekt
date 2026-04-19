@@ -355,7 +355,7 @@ export default function CookPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <Link href={`/recipes/${recipeId}`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px' }}>← Receptet</Link>
+        <Link href="/menu" className="btn-ghost">← Tillbaka till menyn</Link>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Portionsjustering */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 8px' }}>

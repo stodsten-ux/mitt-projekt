@@ -756,3 +756,40 @@
     transform: none;
   }
 }
+
+/* ───────────────────────────────────────────
+   NAVIGATION — TILLBAKA-KNAPP + SIDCONTAINER
+─────────────────────────────────────────── */
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-ghost:hover {
+  background: rgba(45, 74, 62, 0.06);
+  color: var(--color-forest);
+}
+
+.page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.animate-fade-in {
+  animation: slideUp 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
+}

@@ -55,8 +55,9 @@ export default function PantryPage() {
   const expiringSoon = items.filter(i => { const d = daysUntilExpiry(i.expires_at); return d !== null && d <= 3 })
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '28px', color: 'var(--text)' }}>🥦 Skafferiet</h1>
+    <div className="page animate-fade-in">
+      <Link href="/" className="btn-ghost" style={{ marginBottom: '20px' }}>← Tillbaka</Link>
+      <h1 className="t-heading" style={{ marginBottom: '24px' }}>Skafferiet</h1>
 
       {/* Varning snart utgångna */}
       {expiringSoon.length > 0 && (
