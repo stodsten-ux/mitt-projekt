@@ -3,6 +3,27 @@
 ## Nuläge
 Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj/prisinformation är implementerad via Claude-baserad uppskattning. **Appen är långsam** — alla 5 AI-routes använder Opus utan streaming, och `menu/expand` gör sekventiella Opus-anrop (7 rätter = 7× Opus i serie ≈ 2+ min). price_cache är byggd men migrationen inte körd.
 
+## Pågående arbete — 2026-04-19
+
+### UI-redesign (Apple-inspirerat formspråk)
+**Plan:** `docs/superpowers/plans/2026-04-18-ui-redesign.md`
+**Spec:** `docs/superpowers/specs/2026-04-18-ui-redesign-design.md`
+**Dialog:** `.claude/projects/-Users-jonashallgren-Projekt-mathandelsagenten/0327091d-15ac-42e7-9ca0-1831af80c085.jsonl`
+
+**Klart:**
+- [x] Task 1 — CSS-foundation: shadow-system, radius-card 18px, alla dashboard-komponentklasser i components.css
+- [x] Task 2 — Layout chrome: ModeSelector borttagen, paddingTop 104px → 56px
+- [x] Task 3 — Navbar: frosted glass, ingen emoji, nav-pill + nav-icon-btn
+
+**Återstår (kör subagent-driven-development):**
+- [ ] Task 4 — Dashboard (`app/page.js`): hero + steg-kort + CTA-kort, ersätt hela filen
+- [ ] Task 5 — Tillbaka-knappar: `menu/page.js`, `shopping/page.js`, `cook/[recipeId]/page.js`, `pantry/page.js`
+- [ ] Task 6 — Bygga + driftsätta: `npm run build` → verifiera ikoner → `vercel --prod`
+
+**Vad är nästa steg?** → Kör Task 4 (dispatch implementer för `app/page.js`).
+
+---
+
 ## Senaste session — 2026-04-01
 **Gjort:**
 - Skapade price_cache SQL-migration (`supabase/migrations/20260401_create_price_cache.sql`)
