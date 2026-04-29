@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Spinner from '../../../components/Spinner'
+import ShoppingActiveSkeleton from '../../../components/skeletons/ShoppingActiveSkeleton'
 
 const supabase = createClient()
 
@@ -86,13 +87,62 @@ export default function ShoppingActivePage() {
   async function moveToPantry() {
     setMovingToPantry(true)
     const checkedItems = items.filter(i => i.checked)
-    const rows = checkedItems.map(i => ({
-      household_id: householdId,
-      name: i.name,
-      quantity: i.quantity || null,
-      unit: i.unit || null,
-    }))
-    if (rows.length > 0) await supabase.from('pantry').insert(rows)
+    if (checkedItems.length === 0) { setMovingToPantry(false); setShowDoneModal(false); router.push('/pantry'); return }
+
+    // Normalisera alla varor parallellt
+    const normalizeResults = await Promise.allSettled(
+      checkedItems.map(i =>
+        fetch('/api/pantry/normalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: i.name, quantity: i.quantity, unit: i.unit }),
+        }).then(r => r.ok ? r.json() : null)
+      )
+    )
+
+    // Hämta befintliga pantry-poster
+    const { data: pantryItems } = await supabase.from('pantry').select('id, normalized_name, quantity, unit, expires_at')
+      .eq('household_id', householdId)
+    const existingMap = (pantryItems || []).reduce((acc, p) => {
+      if (p.normalized_name) acc[p.normalized_name] = p
+      return acc
+    }, {})
+
+    for (let idx = 0; idx < checkedItems.length; idx++) {
+      const item = checkedItems[idx]
+      const normResult = normalizeResults[idx]
+      const normalized_name = normResult.status === 'fulfilled' && normResult.value?.normalized_name
+        ? normResult.value.normalized_name
+        : item.name.toLowerCase().trim()
+      const category = normResult.status === 'fulfilled' && normResult.value?.category
+        ? normResult.value.category
+        : 'Övrigt'
+
+      const existing = existingMap[normalized_name]
+      if (existing) {
+        const updates = {}
+        if (existing.unit === item.unit && item.quantity && existing.quantity) {
+          const merged = parseFloat(existing.quantity) + parseFloat(item.quantity)
+          if (!isNaN(merged)) updates.quantity = String(merged)
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('pantry').update(updates).eq('id', existing.id)
+        }
+      } else {
+        await supabase.from('pantry').insert({
+          household_id: householdId,
+          name: item.name,
+          quantity: item.quantity || null,
+          unit: item.unit || null,
+          normalized_name,
+          category,
+          source: 'shopping_checkout',
+          added_at: new Date().toISOString(),
+        })
+        existingMap[normalized_name] = { normalized_name, quantity: item.quantity, unit: item.unit }
+      }
+    }
+
     setMovingToPantry(false)
     setShowDoneModal(false)
     router.push('/pantry')
@@ -106,11 +156,7 @@ export default function ShoppingActivePage() {
     window.open('https://www.google.com/maps/search/mataffär+nära+mig', '_blank')
   }
 
-  if (loading) return (
-    <div className="loading-screen-center" style={{ height: '100vh' }}>
-      <Spinner />Laddar lista...
-    </div>
-  )
+  if (loading) return <ShoppingActiveSkeleton />
 
   const checkedCount = items.filter(i => i.checked).length
   const total = items.length
