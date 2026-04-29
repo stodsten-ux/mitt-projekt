@@ -69,7 +69,7 @@ Kärnflödet är komplett: planera, handla och laga fungerar end-to-end. Kampanj
 8. [x] Aktivera Vercel Analytics (Speed Insights) eller Web Vitals-logging
 
 #### P3 — Frontend-upplevelse
-9. [ ] Skeleton screens istället för spinners på meny- och receptsidor
+9. [x] Skeleton screens istället för spinners — alla sidor har nu skeleton loading
 10. [x] SWR för stale-while-revalidate på hushållsdata, menyer, skafferi
 
 #### P4 — Caching lager 2
