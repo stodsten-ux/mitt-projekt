@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import Link from 'next/link'
 import Spinner from '../../components/Spinner'
+import CampaignsSkeleton from '../../components/skeletons/CampaignsSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
@@ -64,7 +65,7 @@ export default function CampaignsPage() {
     return acc
   }, {})
 
-  if (authLoading || !storesLoaded) return <div className="loading-screen"><Spinner />Laddar...</div>
+  if (authLoading || !storesLoaded) return <CampaignsSkeleton />
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '32px 20px' }}>
