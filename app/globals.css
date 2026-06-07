@@ -67,6 +67,34 @@
   --shadow-lg:  0 8px 24px rgba(45,74,62,0.28), 0 24px 56px rgba(45,74,62,0.22),
                 inset 0 1px 0 rgba(255,255,255,0.07);
   --radius-full: 99px;
+
+  /* Spacing-skala */
+  --space-xxs:  2px;
+  --space-3xs:  3px;
+  --space-xs:   4px;
+  --space-2xs:  5px;
+  --space-sm:   6px;
+  --space-7:    7px;
+  --space-md:   8px;
+  --space-10:   10px;
+  --space-11:   11px;
+  --space-lg:   12px;
+  --space-13:   13px;
+  --space-14:   14px;
+  --space-xl:   16px;
+  --space-20:   20px;
+  --space-21:   21px;
+  --space-2xl:  24px;
+  --space-26:   26px;
+  --space-28:   28px;
+  --space-32:   32px;
+  --space-40:   40px;
+  --space-44:   44px;
+  --space-80:   80px;
+
+  /* Kantlinjebredder */
+  --border-width-sm: 1px;
+  --border-width-md: 2px;
 }
 
 /* ── Mörkt läge ── */
@@ -242,6 +270,27 @@ h3 { font-size: 1.125rem; }
 }
 
 .btn-secondary:hover { background: var(--bg); box-shadow: var(--shadow-md); }
+
+/* Primär knapp */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
 
 /* Ghost knapp — avbryt/bakåt */
 .btn-ghost {

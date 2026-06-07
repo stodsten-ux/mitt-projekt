@@ -4,13 +4,17 @@ import { useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Baby, House, Plus, UsersRound, WalletCards } from 'lucide-react'
+import EmptyState from '../../components/EmptyState'
+import Notice from '../../components/Notice'
 import Spinner from '../../components/Spinner'
+import SubpageHeader from '../../components/SubpageHeader'
 import HouseholdSkeleton from '../../components/skeletons/HouseholdSkeleton'
 import { useHousehold } from '../../lib/hooks/useHousehold'
 
 const supabase = createClient()
 
-const inputStyle = { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '15px', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
+const inputStyle = { width: '100%', padding: 'var(--space-lg)', borderRadius: 'var(--radius-sm)', border: 'var(--border-width-sm) solid var(--border)', fontSize: 'var(--text-base)', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }
 
 export default function HouseholdPage() {
   const { user, allMemberships, isLoading: loading, mutate } = useHousehold({ redirectTo: 'login' })
@@ -41,26 +45,34 @@ export default function HouseholdPage() {
   if (loading) return <HouseholdSkeleton />
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px', color: 'var(--text)' }}>🏠 Mina hushåll</h1>
+    <div className="page animate-fade-in">
+      <SubpageHeader
+        eyebrow="Inställningar"
+        title="Mina hushåll"
+        icon={House}
+        backHref="/"
+        backLabel="Hem"
+      />
 
       {/* Lista befintliga hushåll */}
       {allMemberships.length > 0 && (
-        <div style={{ marginBottom: '32px' }}>
+        <div style={{ marginBottom: 'var(--radius-xl)' }}>
           {allMemberships.map((m) => (
             <Link
               key={m.household_id}
               href={`/household/${m.household_id}`}
-              style={{ display: 'block', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '10px', textDecoration: 'none', color: 'var(--text)' }}
+              className="household-list-item"
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h2 style={{ marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>{m.households?.display_name || m.households?.name}</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    {m.households?.adults} vuxna · {m.households?.children} barn · {m.households?.weekly_budget} kr/vecka
+                  <h2 style={{ marginBottom: 'var(--space-xs)', fontSize: 'var(--text-base)', fontWeight: '600', color: 'var(--text)' }}>{m.households?.display_name || m.households?.name}</h2>
+                  <p style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-10)', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)' }}><UsersRound size={13} aria-hidden="true" /> {m.households?.adults} vuxna</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)' }}><Baby size={13} aria-hidden="true" /> {m.households?.children} barn</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)' }}><WalletCards size={13} aria-hidden="true" /> {m.households?.weekly_budget} kr/vecka</span>
                   </p>
                 </div>
-                <span style={{ background: m.role === 'admin' ? 'var(--accent)' : 'var(--bg-card)', color: m.role === 'admin' ? 'var(--accent-text)' : 'var(--text-muted)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
+                <span className={`role-badge ${m.role === 'admin' ? 'role-badge--admin' : 'role-badge--member'}`}>
                   {m.role === 'admin' ? 'Admin' : 'Medlem'}
                 </span>
               </div>
@@ -69,49 +81,74 @@ export default function HouseholdPage() {
         </div>
       )}
 
-      {/* Knapp: skapa */}
-      {view === 'list' && (
+      {/* Tom lista */}
+      {allMemberships.length === 0 && view === 'list' && (
+        <EmptyState
+          icon={House}
+          title="Inga hushåll än"
+          primaryAction={(
+            <button
+              onClick={() => setView('create')}
+              className="btn-primary"
+            >
+              <Plus size={17} aria-hidden="true" />
+              Skapa hushåll
+            </button>
+          )}
+        >
+          Skapa ditt första hushåll för att komma igång med matsedel, inköp och skafferi.
+        </EmptyState>
+      )}
+
+      {/* Knapp: skapa (när det redan finns hushåll) */}
+      {view === 'list' && allMemberships.length > 0 && (
         <button
           onClick={() => setView('create')}
-          style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}
+          className="btn-primary"
+          style={{ width: '100%' }}
         >
-          + Skapa hushåll
+          <Plus size={17} aria-hidden="true" />
+          Skapa hushåll
         </button>
       )}
 
       {/* Formulär: skapa hushåll */}
       {view === 'create' && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px' }}>
-          <h2 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--text)' }}>Skapa nytt hushåll</h2>
+        <div style={{ background: 'var(--bg-card)', border: 'var(--border-width-sm) solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-28)' }}>
+          <h2 style={{ marginBottom: 'var(--space-2xl)', fontSize: 'var(--text-lg)', fontWeight: '600', color: 'var(--text)' }}>Skapa nytt hushåll</h2>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Hushållets namn</label>
+          <div style={{ marginBottom: 'var(--space-xl)' }}>
+            <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: '500', fontSize: 'var(--text-sm)', color: 'var(--text)' }}>Hushållets namn</label>
             <input type="text" value={householdName} onChange={(e) => setHouseholdName(e.target.value)} placeholder="t.ex. Familjen Hallgren" style={inputStyle} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-xl)', marginBottom: 'var(--space-xl)' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Antal vuxna</label>
+              <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: '500', fontSize: 'var(--text-sm)', color: 'var(--text)' }}>Antal vuxna</label>
               <input type="number" value={adults} min={1} onChange={(e) => setAdults(parseInt(e.target.value))} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Antal barn</label>
+              <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: '500', fontSize: 'var(--text-sm)', color: 'var(--text)' }}>Antal barn</label>
               <input type="number" value={children} min={0} onChange={(e) => setChildren(parseInt(e.target.value))} style={inputStyle} />
             </div>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: 'var(--text)' }}>Veckbudget (kr)</label>
+          <div style={{ marginBottom: 'var(--space-2xl)' }}>
+            <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: '500', fontSize: 'var(--text-sm)', color: 'var(--text)' }}>Veckbudget (kr)</label>
             <input type="number" value={budget} min={0} step={100} onChange={(e) => setBudget(parseInt(e.target.value))} style={inputStyle} />
           </div>
 
-          {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,59,48,0.08)', borderRadius: '8px' }}>{error}</p>}
+          {error && (
+            <Notice type="error" style={{ marginBottom: 'var(--space-xl)' }}>
+              {error}
+            </Notice>
+          )}
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => setView('list')} style={{ flex: 1, padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '14px' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
+            <button onClick={() => setView('list')} className="btn-ghost" style={{ flex: 1 }}>
               Avbryt
             </button>
-            <button onClick={createHousehold} disabled={saving || !householdName} style={{ flex: 2, padding: '12px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+            <button onClick={createHousehold} disabled={saving || !householdName} className="btn-primary" style={{ flex: 2 }}>
               {saving ? <><Spinner />&nbsp;Skapar...</> : 'Skapa hushåll'}
             </button>
           </div>
